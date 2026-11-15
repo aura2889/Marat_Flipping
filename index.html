@@ -166,7 +166,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=10"></script>
+<script src="data.enc.js?v=11"></script>
 <script>
 (function(){
 'use strict';
@@ -218,7 +218,9 @@ function allObjects(){
   const mine=LS.newObjs.map((o,i)=>mk(Object.assign({ord:100+i,src:'app',items:[],deal:{}},o),true));
   const arr=base.concat(mine);
   arr.forEach(o=>{if(o.id==='maek'||o.id==='samal-park-192')o.shared=D.shared});
-  return arr.sort((a,b)=>a.ord-b.ord);
+  const rk=o=>o.status==='active'?0:(o.status==='personal'?3:(o.status==='sold'?2:1));
+  const dt=o=>(o.status==='sold'?(o.deal&&o.deal.sellDate):o.start)||'';
+  return arr.sort((a,b)=>rk(a)-rk(b)||(dt(b)<dt(a)?-1:dt(b)>dt(a)?1:0)||b.ord-a.ord);
 }
 function calc(o){
   const its=o.items.filter(i=>!i.x);
@@ -401,7 +403,7 @@ function pnl(o,c){
 function contractBlock(o){
   if(!o.contract)return '';
   const paid=o.items.filter(i=>!i.x&&i.g==='Работы'&&(i.s==='Ремонтная бригада'||i.s==='Под ключ')).reduce((s,i)=>s+i.a,0),left=o.contract-paid;
-  return `<div style="margin:10px 0 2px;cursor:pointer" data-act="itemgo" data-id="${o.id}" data-g="Работы" data-s=""><div class="row hint"><span>Бригада по договору ${money(o.contract)}</span><span>выплачено ${money(paid)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,paid/o.contract*100)}%;background:#8c6a1e"></i></div><div class="row hint" style="margin-top:4px"><span>${pct(paid,o.contract)} оплачено</span><span class="${left<0?'bad':''}">${left<0?'сверх договора '+money(-left):'осталось '+money(left)}</span></div></div>`;
+  return `<div style="margin:10px 0 2px;cursor:pointer" data-act="itemgo" data-id="${o.id}" data-g="Работы" data-s=""><div class="row"><span><i class="dot" style="background:#8c6a1e"></i><b>Бригада по договору</b></span><span class="num"><b>${money(paid)}</b> <span class="mut">из ${money(o.contract)}</span></span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,paid/o.contract*100)}%;background:#8c6a1e"></i></div><div class="row" style="margin-top:6px"><span class="mut">${pct(paid,o.contract)} оплачено</span><span class="num ${left<0?'bad':''}"><b>${left<0?'сверх договора '+money(-left):'осталось '+money(left)}</b></span></div></div>`;
 }
 function objSum(o,c){
   let h=passport(o,c);
@@ -595,7 +597,7 @@ function anaCalc(){
   <div id="calcOut" style="margin-top:12px">${calcOut()}</div></div>`;
 }
 
-function cmpRows(){return rowsFlip().filter(r=>r.c.total>0&&r.o.items.length).sort((a,b)=>(a.o.ord||0)-(b.o.ord||0))}
+function cmpRows(){return rowsFlip().filter(r=>r.c.total>0&&r.o.items.length).slice()}
 function anaCmp(){
   const all=cmpRows(),sel=S.ana.sel&&S.ana.sel.length?S.ana.sel:all.map(r=>r.o.id);
   const rows=all.filter(r=>sel.indexOf(r.o.id)>-1),m2=S.ana.cm==='m',g=S.ana.cg;
@@ -657,7 +659,7 @@ function render(keep){
   else if(S.tab==='exp')h=vExpenses();
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v10 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v11 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
