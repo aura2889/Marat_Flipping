@@ -269,7 +269,7 @@ function stats(){
 }
 
 /* ---------- state ---------- */
-const S={tab:'home',obj:null,otab:'sum',of:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
+const S={tab:'home',obj:null,otab:'sum',of:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
 
 /* ---------- components ---------- */
 function bars(map,total){
@@ -311,7 +311,7 @@ function vHome(){
   const act=s.rows.filter(r=>r.o.status==='active');
   const years=Object.keys(s.yrs).filter(y=>y!=='—').sort();
   let h=`<div class="top"><div><div class="brand">Flip <b>Ledger</b></div><div class="sub">Книга сделок и ремонта</div></div><button class="btn ghost small" data-act="lock">Закрыть</button></div>`;
-  h+=`<div class="hero" data-act="go" data-t="ana" data-sub="dyn"><div class="l">Заработано с начала флиппинга</div><div class="v">${mln(s.earned)}</div><div class="s">${s.val.length} сделок с расчётом${s.first?' · с '+fdate(s.first):''}</div>
+  h+=`<div class="hero" data-act="go" data-t="ana" data-sub="dyn"><div class="l">Заработано с начала флиппинга</div><div class="v">${mln1(s.earned)}</div><div class="s">${s.val.length} сделок с расчётом${s.first?' · с '+fdate(s.first):''}</div>
    <div class="mini"><div><b>${mln1(s.revenue)}</b><span>выручка</span></div><div><b>${s.val.length?mln(s.earned/s.val.length):'—'}</b><span>средняя маржа</span></div><div><b>${s.avgRoi!=null?(s.avgRoi*100).toFixed(0)+'%':'—'}</b><span>средний ROI</span></div></div><div class="go">динамика ›</div></div>`;
   if(years.length){
     const mx=Math.max(1,...years.map(y=>s.yrs[y].filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0)));
@@ -524,11 +524,12 @@ function validDeals(){return rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate).
 function vAnalytics(){
   const A=S.ana;
   let h=`<div class="top"><div><div class="brand">Анализ</div><div class="sub">как растёт бизнес</div></div></div>
-  <div class="tabs">${[['dyn','Динамика'],['rank','Рейтинг'],['seg','Сегменты'],['calc','Калькулятор']].map(t=>`<button class="tab ${A.sub===t[0]&&!A.year?'on':''}" data-act="ana" data-sub="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  <div class="tabs">${[['dyn','Динамика'],['rank','Рейтинг'],['seg','Сегменты'],['calc','Калькулятор'],['cmp','Сравнение ремонтов']].map(t=>`<button class="tab ${A.sub===t[0]&&!A.year?'on':''}" data-act="ana" data-sub="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   if(A.year)return h+anaYear(A.year);
   if(A.sub==='dyn')return h+anaDyn();
   if(A.sub==='rank')return h+anaRank();
   if(A.sub==='seg')return h+anaSeg();
+  if(A.sub==='cmp')return h+anaCmp();
   return h+anaCalc();
 }
 function anaDyn(){
@@ -586,6 +587,48 @@ function anaCalc(){
   <div class="grid2"><div><label>Покупка в ДКП</label><input data-calc="buyDkp" inputmode="numeric" value="${esc(C.buyDkp)}" placeholder="как факт"></div><div><label>Продажа в ДКП</label><input data-calc="sellDkp" inputmode="numeric" value="${esc(C.sellDkp)}" placeholder="как факт"></div></div>
   <div id="calcOut" style="margin-top:12px">${calcOut()}</div></div>`;
 }
+
+function cmpRows(){return rowsFlip().filter(r=>r.c.total>0&&r.o.items.length).sort((a,b)=>(a.o.ord||0)-(b.o.ord||0))}
+function anaCmp(){
+  const all=cmpRows(),sel=S.ana.sel&&S.ana.sel.length?S.ana.sel:all.map(r=>r.o.id);
+  const rows=all.filter(r=>sel.indexOf(r.o.id)>-1),m2=S.ana.cm==='m',g=S.ana.cg;
+  const sh=r=>r.o.name.replace(/^(Самал|Премиум Плаза|Зельмар|Голден Парк|Golden Park)\s*/,'$1 ').replace('Премиум Плаза','Премиум').replace('Голден Парк','Голден');
+  const f=(v,r)=>{if(!v)return null;return m2?(r.c.area?v/r.c.area:null):v};
+  const fm=v=>v==null?'—':Math.round(m2?v:v/1000).toLocaleString('ru-RU').replace(/[  ]/g,' ');
+  const cell=(vals,j)=>{const a=vals.filter(x=>x!=null&&x>0);const avg=a.length>1?a.reduce((s,x)=>s+x,0)/a.length:0;const v=vals[j];let st='';if(avg&&v){if(v>avg*1.2)st='background:#fbe6e1;';else if(v<avg*.8)st='background:#e3f2e8;'}return `<td class="r num" style="${st}white-space:nowrap">${fm(v)}</td>`};
+  const line=(label,vals,opt)=>{opt=opt||{};const a=vals.filter(x=>x!=null&&x>0),avg=a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+    return `<tr${opt.attr||''}><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${label}</td>${vals.map((v,j)=>cell(vals,j)).join('')}<td class="r num" style="white-space:nowrap;font-weight:700">${fm(avg)}</td></tr>`};
+  let h=`<div class="card"><h3>Сравнение ремонтов</h3><div class="hint" style="margin-bottom:8px">Похожие квартиры рядом: сколько ушло на каждый этап. Зелёное — заметно дешевле среднего, красное — заметно дороже. Нажмите на группу, чтобы увидеть подгруппы и цены материалов.</div>
+  <div class="tabs" style="margin-bottom:6px">${all.map(r=>`<button class="tab ${sel.indexOf(r.o.id)>-1?'on':''}" data-act="cmpsel" data-id="${r.o.id}">${esc(sh(r))}</button>`).join('')}</div>
+  <div class="tabs" style="margin-bottom:8px"><button class="tab ${!m2?'on':''}" data-act="cmpm" data-m="t">Всего, тыс ₸</button><button class="tab ${m2?'on':''}" data-act="cmpm" data-m="m">На м², ₸</button></div>`;
+  if(!rows.length)return h+'<div class="mut">Выберите хотя бы один объект</div></div>';
+  const head=`<tr><th style="position:sticky;left:0;background:var(--card,#fffdf6)"></th>${rows.map(r=>`<th class="r" style="white-space:nowrap">${esc(sh(r))}</th>`).join('')}<th class="r">Среднее</th></tr>`;
+  let body=`<tr><td class="hint">Площадь, м²</td>${rows.map(r=>`<td class="r hint">${r.c.area||'—'}</td>`).join('')}<td></td></tr>`;
+  if(!g){
+    const gs=GROUPS.filter(x=>rows.some(r=>r.c.byG[x]));
+    body+=gs.map(x=>line(`<a data-act="cmpg" data-g="${x}" style="cursor:pointer"><i class="dot" style="background:${GCOL[x]}"></i><b>${x}</b> ›</a>`,rows.map(r=>f(r.c.byG[x],r)))).join('');
+    body+=line('<b>Ремонт без мебели и техники</b>',rows.map(r=>f(r.c.repair,r)),{attr:' class="total"'});
+    body+=line('<b>Всего расходов</b>',rows.map(r=>f(r.c.total,r)));
+    h+=`<div style="overflow-x:auto;margin:0 -4px"><table>${head}${body}</table></div></div>`;
+    return h;
+  }
+  const subs=[...new Set(rows.flatMap(r=>Object.keys(r.c.byS).filter(k=>k.split('›')[0]===g)))].sort((a,b)=>rows.reduce((s,r)=>s+(r.c.byS[b]||0),0)-rows.reduce((s,r)=>s+(r.c.byS[a]||0),0));
+  body+=subs.map(k=>line(esc(k.split('›')[1]),rows.map(r=>f(r.c.byS[k],r)))).join('');
+  body+=line(`<b>Итого ${g}</b>`,rows.map(r=>f(r.c.byG[g],r)),{attr:' class="total"'});
+  h=h.replace('<h3>Сравнение ремонтов</h3>',`<h3><a data-act="cmpg" data-g="" style="cursor:pointer;color:var(--gold2,#b8892a)">‹ Все группы</a> · ${g}</h3>`);
+  h+=`<div style="overflow-x:auto;margin:0 -4px"><table>${head}${body}</table></div></div>`;
+  // unit prices
+  const pm={};
+  rows.forEach(r=>r.o.items.filter(i=>!i.x&&i.g===g&&i.p>0&&i.q>0).forEach(i=>{if(/расходник|инструмент/i.test(i.t||''))return;let u=(i.u||'ед.').toLowerCase();if(/ротбонд|наливн|шпакл|пгс|клей/i.test(i.t||'')&&(u==='шт'||u==='меш'))u='мешок';const k=(i.t||i.n)+' · '+u;const e=(pm[k]=pm[k]||{});const z=(e[r.o.id]=e[r.o.id]||{a:0,q:0});z.a+=i.a;z.q+=i.q}));
+  const keys=Object.keys(pm).filter(k=>Object.keys(pm[k]).length>1).sort((a,b)=>Object.keys(pm[b]).length-Object.keys(pm[a]).length||a.localeCompare(b));
+  if(keys.length){
+    h+=`<div class="card"><h3>Цены материалов за единицу, ₸</h3><div class="hint" style="margin-bottom:8px">Средняя цена за единицу по накладным — видно, где материал покупался дороже.</div><div style="overflow-x:auto;margin:0 -4px"><table>${head.replace(/<th class="r">Среднее<\/th>/,'<th class="r">Разброс</th>')}`+keys.map(k=>{
+      const vals=rows.map(r=>pm[k][r.o.id]?pm[k][r.o.id].a/pm[k][r.o.id].q:null),a=vals.filter(x=>x!=null);
+      const mn=Math.min(...a),mx=Math.max(...a);
+      return `<tr><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${esc(k)}</td>${vals.map(v=>`<td class="r num" style="white-space:nowrap;${a.length>1&&v!=null&&v===mx&&mx>mn*1.05?'background:#fbe6e1;':a.length>1&&v!=null&&v===mn&&mx>mn*1.05?'background:#e3f2e8;':''}">${v==null?'—':Math.round(v).toLocaleString('ru-RU').replace(/[  ]/g,' ')}</td>`).join('')}<td class="r num hint">${a.length>1&&mn>0?(mx>mn*1.005?'+'+Math.round((mx/mn-1)*100)+'%':'='):''}</td></tr>`}).join('')+`</table></div></div>`;
+  }
+  return h;
+}
 function calcOut(){
   const C=S.calc,buy=num(C.buy),sell=num(C.sell);
   if(buy==null||sell==null)return '<div class="hint">Введите цену покупки и продажи.</div>';
@@ -629,6 +672,9 @@ document.addEventListener('click',e=>{
   else if(a==='ana'){S.ana.sub=el.dataset.sub;S.ana.year=null;render()}
   else if(a==='year'){S.tab='ana';S.ana.sub='dyn';S.ana.year=el.dataset.y||null;render()}
   else if(a==='rk'){S.ana.rk=el.dataset.k;render(true)}
+  else if(a==='cmpm'){S.ana.cm=el.dataset.m;render(true)}
+  else if(a==='cmpg'){S.ana.cg=el.dataset.g||null;render(true)}
+  else if(a==='cmpsel'){const all=cmpRows().map(r=>r.o.id);let s=S.ana.sel||all.slice();const k=el.dataset.id;s=s.indexOf(k)>-1?s.filter(x=>x!==k):s.concat(k);S.ana.sel=s.length?s:null;render(true)}
   else if(a==='newobj'){S.tab='newobj';render()}
   else if(a==='savenew'){
     const name=($('#no_name').value||'').trim();if(!name){$('#no_name').focus();return}
