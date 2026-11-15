@@ -172,11 +172,11 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 'use strict';
 let D=null,RULES=[];
 const KEY='flipledger.v1',TAX_RATE=0.10;
-const GROUPS=['Работы','Черновые','Чистовые','Кафель','Электрика','Люстры','Сантехника','Мебель','Техника','Шторы','Декор','Доставка и мусор','Прочее'];
-const GCOL={'Работы':'#8c6a1e','Черновые':'#8a7a60','Чистовые':'#5b7f95','Кафель':'#1f8a7d','Электрика':'#d4701a','Люстры':'#e3b43f','Сантехника':'#2f6fb0','Мебель':'#7d55b0','Техника':'#9c3d54','Шторы':'#c2678b','Декор':'#4f9a4a','Доставка и мусор':'#6b7a88','Прочее':'#8a929a'};
+const GROUPS=['Работы','Черновые','Чистовые','Кафель','Электрика','Люстры','Сантехника','Мебель','Техника','Шторы','Ковры','Доставка и мусор','Прочее'];
+const GCOL={'Работы':'#8c6a1e','Черновые':'#8a7a60','Чистовые':'#5b7f95','Кафель':'#1f8a7d','Электрика':'#d4701a','Люстры':'#e3b43f','Сантехника':'#2f6fb0','Мебель':'#7d55b0','Техника':'#9c3d54','Шторы':'#c2678b','Ковры':'#b8734a','Доставка и мусор':'#6b7a88','Прочее':'#8a929a'};
 const ST={sold:'Продан',listed:'В продаже',active:'В ремонте',unknown:'Уточнить статус',personal:'Личный'};
 const TYPES={material:'Материалы',work:'Работа',delivery:'Доставка / мусор',service:'Услуги / документы'};
-const REPAIR_EXCL=['Мебель','Техника'];
+const REPAIR_EXCL=['Мебель','Техника','Ковры'];
 const MON=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 
 /* ---------- storage ---------- */
@@ -412,7 +412,7 @@ function objSum(o,c){
     h+=`<div class="card"><h3>Материалы и работа</h3>${Object.keys(c.byY).map(k=>`<div class="row" style="padding:4px 0"><span>${TYPES[k]||k}</span><span class="num">${money(c.byY[k])} <span class="mut">· ${pct(c.byY[k],c.total)}</span></span></div>`).join('')}</div>`;
     h+=`<div class="card"><h3>Детали по группам</h3>`+GROUPS.filter(g=>c.byG[g]).sort((a,b)=>c.byG[b]-c.byG[a]).map(g=>{
       const subs=Object.keys(c.byS).filter(k=>k.split('›')[0]===g).sort((a,b)=>c.byS[b]-c.byS[a]);
-      return `<details><summary class="row"><span><i class="dot" style="background:${GCOL[g]}"></i><b>${g}</b></span><span class="num">${money(c.byG[g])}</span></summary>${subs.map(k=>`<div class="row hint" style="padding:3px 0 3px 16px"><span>${esc(k.split('›')[1])}</span><span class="num">${money(c.byS[k])}</span></div>`).join('')}</details>`}).join('')+`</div>`;
+      return `<details><summary class="row"><span><i class="dot" style="background:${GCOL[g]}"></i><b>${g}</b></span><span class="num">${money(c.byG[g])}</span></summary>${subs.map(k=>`<div class="row hint" style="padding:3px 0 3px 16px"><span>${esc(k.split('›')[1])}</span><span class="num">${money(c.byS[k])}</span></div>`).join('')}${g==='Черновые'&&c.byS['Доставка и мусор›Доставка: черновые']?`<div class="row hint" style="padding:3px 0 3px 16px;font-style:italic"><span>+ доставка черновых (в группе «Доставка и мусор»)</span><span class="num">${money(c.byS['Доставка и мусор›Доставка: черновые'])}</span></div>`:''}</details>`}).join('')+`</div>`;
   }
   if(o.shared)h+=`<div class="note">Мебель Маэка и Самала 192 закупалась общим списком на ${money(o.shared.reduce((s,i)=>s+i.a,0))}. Детализация (${o.shared.length} поз.) есть в поиске материалов; в суммы объектов входят только строки «Мебель».</div>`;
   return h;
