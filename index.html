@@ -63,7 +63,7 @@ h1,h2,h3{margin:0;font-weight:700}
 .ycols{display:flex;align-items:flex-end;gap:12px;height:190px;padding:6px 2px 0}
 .ycol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;background:none;border:0;padding:0}
 .ycol .bar2{width:100%;border-radius:12px 12px 4px 4px;background:linear-gradient(180deg,var(--gold2),var(--gold));min-height:4px;box-shadow:0 8px 16px -10px rgba(184,138,42,.8)}
-.ycol .val{font-family:var(--serif);font-weight:600;font-size:15px;margin-bottom:5px}
+.ycol .val{font-family:var(--serif);font-weight:800;font-size:clamp(17px,5.4vw,24px);white-space:nowrap;margin-bottom:7px;color:#8a5f0d;letter-spacing:-.3px}
 .ycol .yr{margin-top:6px;font-weight:700;font-size:14px}
 .ycol .cnt{font-size:11px;color:var(--mut)}
 .ycol.on .bar2{background:linear-gradient(180deg,#2a9a74,var(--em))}
@@ -166,7 +166,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=11"></script>
+<script src="data.enc.js?v=12"></script>
 <script>
 (function(){
 'use strict';
@@ -271,7 +271,7 @@ function stats(){
 }
 
 /* ---------- state ---------- */
-const S={tab:'home',obj:null,otab:'sum',of:'',os:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
+const S={tax:{y:'2026',fc:{}},tab:'home',obj:null,otab:'sum',of:'',os:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
 
 /* ---------- components ---------- */
 function bars(map,total,attrf){
@@ -322,7 +322,7 @@ function vHome(){
   h+=`<div class="tiles">
    <button class="tile arr" data-act="go" data-t="objects"><div class="l">Объектов</div><div class="v">${s.rows.length}</div><div class="s">продано ${s.sold.length} · в ремонте ${act.length}</div></button>
    <button class="tile arr" data-act="go" data-t="exp"><div class="l">Всего расходов</div><div class="v">${mln1(s.spent)}</div><div class="s">ремонт, мебель, техника</div></button>
-   <button class="tile arr" data-act="go" data-t="ana" data-sub="rank"><div class="l">Налоги</div><div class="v">${mln(s.tax)}</div><div class="s">уплачено по сделкам</div></button>
+   <button class="tile arr" data-act="go" data-t="tax"><div class="l">Налоги</div><div class="v">${mln(s.tax)}</div><div class="s">уплачено по сделкам</div></button>
    <button class="tile arr" data-act="go" data-t="ana" data-sub="seg"><div class="l">Риелторы</div><div class="v">${mln(s.realtor)}</div><div class="s">комиссии по сделкам</div></button></div>`;
   if(s.partial||s.missing||s.unrec){
     h+=`<div class="note">`+(s.partial?`У <b>${s.partial}</b> проданного объекта пока нет привязанных расходов (отмечены *) — их маржа в итоги не входит.<br>`:'')+(s.unrec?`<b>${s.unrec}</b> позиций в «Прочее» без чёткой группы — подскажите, куда отнести.`:'')+`</div>`;
@@ -641,6 +641,35 @@ function anaCmp(){
   }
   return h;
 }
+
+const TAXPAID0={'2025':3018100};
+function taxPaid(y){const v=LS.taxPaid&&LS.taxPaid[y];return v!=null&&v!==''?+v:(TAXPAID0[y]||0)}
+function vTax(){
+  const T=S.tax,rows=rowsFlip().filter(r=>r.o.status==='sold'&&r.o.deal.sellDate);
+  const ys=[...new Set(rows.map(r=>r.o.deal.sellDate.slice(0,4)))].sort().reverse();
+  const y=T.y;
+  const byY=yy=>rows.filter(r=>r.o.deal.sellDate.slice(0,4)===yy);
+  const acc=yy=>byY(yy).reduce((s,r)=>s+(r.c.tax||0),0);
+  const base=yy=>byY(yy).reduce((s,r)=>s+Math.max(0,(r.c.sD||0)-(r.c.bD||0)),0);
+  let h=`<div class="top"><div><div class="brand">Налоги</div><div class="sub">начислено, уплачено, к уплате</div></div></div>
+  <div class="tabs">${ys.map(x=>`<button class="tab ${y===x?'on':''}" data-act="taxy" data-y="${x}">${x}</button>`).join('')}<button class="tab ${y==='all'?'on':''}" data-act="taxy" data-y="all">Все годы</button></div>`;
+  if(y==='all'){
+    const tot=ys.reduce((s,x)=>s+acc(x),0),paid=ys.reduce((s,x)=>s+taxPaid(x),0);
+    h+=`<div class="hero" style="cursor:default"><div class="l">Налогов за всё время</div><div class="v">${mln(tot)}</div><div class="s">уплачено ${mln(paid)} · остаток ${mln(tot-paid)}</div></div>
+    <div class="card"><table><tr><th>Год</th><th class="r">Начислено</th><th class="r">Уплачено</th><th class="r">Остаток</th></tr>${ys.map(x=>`<tr data-act="taxy" data-y="${x}" style="cursor:pointer"><td><b>${x}</b> ›</td><td class="r num">${money(acc(x))}</td><td class="r num">${money(taxPaid(x))}</td><td class="r num ${acc(x)-taxPaid(x)>0?'bad':'good'}"><b>${money(acc(x)-taxPaid(x))}</b></td></tr>`).join('')}</table></div>`;
+  }else{
+    const a=acc(y),p=taxPaid(y),left=a-p;
+    h+=`<div class="hero" style="cursor:default"><div class="l">Налог за ${y} год</div><div class="v">${mln(a)}</div><div class="s">${left>0?'к уплате ещё '+money(left):(left<0?'переплата '+money(-left):'оплачено полностью')}</div>
+    <div class="mini"><div><b>${mln(base(y))}</b><span>налоговая база</span></div><div><b>${byY(y).length}</b><span>сделок</span></div><div><b>${mln(p)}</b><span>уплачено</span></div></div></div>
+    <div class="card"><h3>Сколько уплачено за ${y}</h3><div class="grid2"><div><label>Уплачено, ₸</label><input data-taxpaid="${y}" inputmode="numeric" value="${p||''}" placeholder="0"></div><div><label>К уплате</label><div id="taxLeft" class="num" style="font-size:20px;font-weight:800;padding-top:8px;color:${left>0?'var(--bad)':'var(--good)'}">${money(left)}</div></div></div></div>
+    <div class="card"><h3>Сделки ${y} года</h3><div class="hint" style="margin-bottom:6px">Налог = 10% × (ДКП продажи − ДКП покупки). Нажмите на сделку — откроется карточка.</div>
+    <table><tr><th>Объект</th><th class="r">База</th><th class="r">Налог</th></tr>${byY(y).sort((p,q)=>q.o.deal.sellDate.localeCompare(p.o.deal.sellDate)).map(r=>`<tr data-act="open" data-id="${r.o.id}" style="cursor:pointer"><td><b>${esc(r.o.name)}</b> ›<div class="hint">ДКП ${mln(r.c.bD)} → ${mln(r.c.sD)} · продан ${fdate(r.o.deal.sellDate)}</div></td><td class="r num">${money(Math.max(0,(r.c.sD||0)-(r.c.bD||0)))}</td><td class="r num"><b>${money(r.c.tax||0)}</b></td></tr>`).join('')}
+    <tr class="total"><td>Итого</td><td class="r num">${money(base(y))}</td><td class="r num">${money(a)}</td></tr></table></div>`;
+  }
+  const act=rowsFlip().filter(r=>r.o.status==='active');
+  if(act.length)h+=`<div class="card"><h3>Прогноз по текущим объектам</h3><div class="hint" style="margin-bottom:8px">Впишите цену продажи в ДКП — посчитаем налог.</div>${act.map(r=>{const bd=r.c.bD,sv=T.fc[r.o.id];const tx=(sv!=null&&sv!==''&&bd!=null)?Math.max(0,Math.round(TAX_RATE*(+sv-bd))):null;return `<div style="padding:8px 0;border-top:1px solid var(--line)"><div class="row"><b data-act="open" data-id="${r.o.id}" style="cursor:pointer">${esc(r.o.name)} ›</b><span class="hint">ДКП покупки ${bd!=null?mln(bd):'не указана'}</span></div><div class="grid2" style="margin-top:6px"><div><label>ДКП продажи, ₸</label><input data-tf="${r.o.id}" inputmode="numeric" value="${esc(sv||'')}" placeholder="например 35000000"></div><div><label>Налог</label><div class="num" id="tf_${r.o.id}" style="font-size:18px;font-weight:800;padding-top:8px">${tx!=null?money(tx):'—'}</div></div></div></div>`}).join('')}</div>`;
+  return h;
+}
 function calcOut(){
   const C=S.calc,buy=num(C.buy),sell=num(C.sell);
   if(buy==null||sell==null)return '<div class="hint">Введите цену покупки и продажи.</div>';
@@ -650,8 +679,8 @@ function calcOut(){
 }
 
 /* ---------- render ---------- */
-const ICONS={home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',objects:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',exp:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',mat:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',ana:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>'};
-const TABS=[['home','Обзор','home'],['objects','Объекты','objects'],['exp','Расходы','exp'],['mat','Материалы','mat'],['ana','Анализ','ana']];
+const ICONS={tax:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',objects:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',exp:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',mat:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',ana:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>'};
+const TABS=[['home','Обзор','home'],['objects','Объекты','objects'],['exp','Расходы','exp'],['tax','Налоги','tax'],['mat','Материалы','mat'],['ana','Анализ','ana']];
 function render(keep){
   const y=window.scrollY;let h;
   if(S.tab==='newobj')h=vNewObj();
@@ -659,7 +688,8 @@ function render(keep){
   else if(S.tab==='exp')h=vExpenses();
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v11 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else if(S.tab==='tax')h=vTax();
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v12 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -688,6 +718,7 @@ document.addEventListener('click',e=>{
   else if(a==='ana'){S.ana.sub=el.dataset.sub;S.ana.year=null;render()}
   else if(a==='year'){S.tab='ana';S.ana.sub='dyn';S.ana.year=el.dataset.y||null;render()}
   else if(a==='rk'){S.ana.rk=el.dataset.k;render(true)}
+  else if(a==='taxy'){S.tab='tax';S.tax.y=el.dataset.y;render()}
   else if(a==='cmpm'){S.ana.cm=el.dataset.m;render(true)}
   else if(a==='cmpg'){S.ana.cg=el.dataset.g||null;render(true)}
   else if(a==='cmpsel'){const all=cmpRows().map(r=>r.o.id);let s=S.ana.sel||all.slice();const k=el.dataset.id;s=s.indexOf(k)>-1?s.filter(x=>x!==k):s.concat(k);S.ana.sel=s.length?s:null;render(true)}
@@ -735,6 +766,8 @@ document.addEventListener('input',e=>{
   const t=e.target;
   if(t.id==='mq'){S.mat.q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.id==='oq'){S.oq=t.value;S.olim=60;clearTimeout(window._ot);window._ot=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#oq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
+  else if(t.dataset.taxpaid!==undefined){const y=t.dataset.taxpaid;LS.taxPaid=LS.taxPaid||{};const v=t.value.trim();LS.taxPaid[y]=v===''?null:(isNaN(ev(v))?0:ev(v));save();const rs=rowsFlip().filter(r=>r.o.status==='sold'&&(r.o.deal.sellDate||'').slice(0,4)===y);const a=rs.reduce((s,r)=>s+(r.c.tax||0),0),l=a-taxPaid(y),e=$('#taxLeft');if(e){e.textContent=money(l);e.style.color=l>0?'var(--bad)':'var(--good)'}}
+  else if(t.dataset.tf){S.tax.fc[t.dataset.tf]=t.value;const r=rowsFlip().find(x=>x.o.id===t.dataset.tf),v=ev(t.value.trim()),e=$('#tf_'+t.dataset.tf);if(e)e.textContent=(r&&r.c.bD!=null&&!isNaN(v))?money(Math.max(0,Math.round(TAX_RATE*(v-r.c.bD)))):'—'}
   else if(t.dataset.calc){S.calc[t.dataset.calc]=t.value;const o=$('#calcOut');if(o)o.innerHTML=calcOut()}
   else if(t.id==='ae_n'){const h=$('#ae_hint');if(h){const c=t.value.trim()?classify(t.value):null;h.textContent=c?('→ '+c.g+' › '+c.s):'определится по названию'}}
 });
