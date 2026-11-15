@@ -166,7 +166,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=8"></script>
+<script src="data.enc.js?v=9"></script>
 <script>
 (function(){
 'use strict';
@@ -337,7 +337,7 @@ function vHome(){
   });
   h+=`<div class="h2">Все объекты</div><div class="card">${s.rows.map(r=>dealRow(r)).join('')}</div>`;
   const gm={};s.rows.forEach(r=>{for(const g in r.c.byG)gm[g]=(gm[g]||0)+r.c.byG[g]});
-  h+=`<div class="h2">Куда уходят деньги</div><div class="card">${bars(gm,s.spent)}</div>`;
+  h+=`<div class="h2">Куда уходят деньги</div><div class="card">${bars(gm,s.spent,k=>`data-act="expgo" data-id="all" data-b="g" data-k="${esc(k)}"`)}</div>`;
   h+=`<div class="h2">Данные</div><div class="card"><div class="hint" style="margin-bottom:8px">Цены сделок и расходы, введённые в приложении, хранятся на этом телефоне. Сохраняйте резервную копию.</div><div class="grid2"><button class="btn ghost" data-act="export">Скачать копию</button><button class="btn ghost" data-act="import">Загрузить копию</button></div><input type="file" id="impf" accept="application/json" style="display:none"></div>`;
   return h;
 }
@@ -408,7 +408,7 @@ function objSum(o,c){
    ${c.area&&c.margin!=null&&!c.partial?`<div class="tile" style="cursor:default"><div class="l">Маржа на м²</div><div class="v">${money(c.margin/c.area)}</div></div>`:''}
   </div>${c.complete?'':'<div class="note" style="margin:12px 0 0">Чтобы увидеть маржу, откройте «Сделка» и впишите цены покупки и продажи.</div>'}</div>`;
   if(c.total){
-    h+=`<div class="card"><h3>Расходы по группам</h3>${bars(c.byG,c.total)}</div>`;
+    h+=`<div class="card"><h3>Расходы по группам</h3>${bars(c.byG,c.total,k=>`data-act="itemgo" data-id="${o.id}" data-g="${esc(k)}" data-s=""`)}</div>`;
     h+=`<div class="card"><h3>Материалы и работа</h3>${Object.keys(c.byY).map(k=>`<div class="row" style="padding:4px 0"><span>${TYPES[k]||k}</span><span class="num">${money(c.byY[k])} <span class="mut">· ${pct(c.byY[k],c.total)}</span></span></div>`).join('')}</div>`;
     h+=`<div class="card"><h3>Детали по группам</h3>`+GROUPS.filter(g=>c.byG[g]).sort((a,b)=>c.byG[b]-c.byG[a]).map(g=>{
       const subs=Object.keys(c.byS).filter(k=>k.split('›')[0]===g).sort((a,b)=>c.byS[b]-c.byS[a]);
@@ -544,7 +544,7 @@ function anaDyn(){
   const T=s.val.reduce((a,r)=>{a.sell+=r.c.sell;a.buy+=r.c.buy;a.rep+=r.c.total;a.tax+=r.c.tax||0;a.rl+=r.c.realtor;a.ex+=r.c.extra;a.m+=r.c.margin;return a},{sell:0,buy:0,rep:0,tax:0,rl:0,ex:0,m:0});
   const parts=[['Покупка',T.buy,'#8a7a60'],['Ремонт, мебель, техника',T.rep,'#b88a2a'],['Налог',T.tax,'#c4392b'],['Риелтор',T.rl,'#2f6fb0'],['Прочее',T.ex,'#8a929a'],['Прибыль',T.m,'#1d8a57']].filter(p=>p[1]>0);
   h+=`<div class="h2">Куда уходит выручка</div><div class="card"><div class="stack">${parts.map(p=>`<i style="width:${p[1]/T.sell*100}%;background:${p[2]}"></i>`).join('')}</div>
-  ${parts.map(p=>`<div class="row" style="padding:6px 0"><span><i class="dot" style="background:${p[2]}"></i>${p[0]}</span><span class="num">${mln(p[1])} <span class="mut">· ${pct(p[1],T.sell)}</span></span></div>`).join('')}<div class="hint">Сумма продаж ${mln(T.sell)} по ${s.val.length} сделкам с расчётом</div></div>`;
+  ${parts.map(p=>`<div class="row" style="padding:6px 0;cursor:pointer" ${p[0].indexOf('Ремонт')===0?'data-act="go" data-t="exp"':'data-act="ana" data-sub="rank"'}><span><i class="dot" style="background:${p[2]}"></i>${p[0]}</span><span class="num">${mln(p[1])} <span class="mut">· ${pct(p[1],T.sell)}</span></span></div>`).join('')}<div class="hint">Сумма продаж ${mln(T.sell)} по ${s.val.length} сделкам с расчётом</div></div>`;
   return h;
 }
 function anaYear(y){
@@ -609,6 +609,9 @@ function anaCmp(){
     body+=gs.map(x=>line(`<a data-act="cmpg" data-g="${x}" style="cursor:pointer"><i class="dot" style="background:${GCOL[x]}"></i><b>${x}</b> ›</a>`,rows.map(r=>f(r.c.byG[x],r)),{gs:[x,'']})).join('');
     body+=line('<b>Ремонт без мебели и техники</b>',rows.map(r=>f(r.c.repair,r)),{attr:' class="total"'});
     body+=line('<b>Всего расходов</b>',rows.map(r=>f(r.c.total,r)));
+    const ST=[['Черновой этап',['Черновые','Электрика','Сантехника']],['Чистовой этап',['Чистовые','Кафель','Люстры','Шторы']],['Мебель, техника, ковры',['Мебель','Техника','Ковры']],['Работы бригады',['Работы']],['Доставка и мусор',['Доставка и мусор']]];
+    body+=`<tr><td colspan="${rows.length+2}" class="hint" style="padding-top:14px">По этапам (даты расходов пока не ведутся — этапы собраны из групп)</td></tr>`;
+    body+=ST.map(s=>line(s[0],rows.map(r=>f(s[1].reduce((t,x)=>t+(r.c.byG[x]||0),0),r)))).join('');
     h+=`<div style="overflow-x:auto;margin:0 -4px"><table>${head}${body}</table></div></div>`;
     return h;
   }
@@ -647,7 +650,7 @@ function render(keep){
   else if(S.tab==='exp')h=vExpenses();
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v8 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v9 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -662,7 +665,7 @@ document.addEventListener('click',e=>{
   else if(a==='itemgo'){S.tab='objects';S.obj=el.dataset.id;S.otab='items';S.of=el.dataset.g||'';S.os=el.dataset.s||'';S.oq='';S.olim=60;render()}
   else if(a==='clros'){S.os='';render(true)}
   else if(a==='matgo'){S.tab='mat';S.obj=null;S.mat.q=el.dataset.q;S.mat.g='';render()}
-  else if(a==='expgo'){S.tab='exp';S.obj=null;S.exp.scope=el.dataset.id;S.exp.by='s';S.exp.drill=el.dataset.k;render()}
+  else if(a==='expgo'){S.tab='exp';S.obj=null;S.exp.scope=el.dataset.id;S.exp.by=el.dataset.b||'s';S.exp.drill=el.dataset.k;render()}
   else if(a==='open'){S.os='';S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;render()}
   else if(a==='otab'){S.otab=el.dataset.t;S.of='';S.os='';S.oq='';S.olim=60;render()}
   else if(a==='ofl'){S.ofl=el.dataset.f;render(true)}
