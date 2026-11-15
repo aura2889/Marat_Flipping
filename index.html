@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Flip Ledger</title>
+<meta name="theme-color" content="#f7f3ea">
+<meta name="color-scheme" content="light">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f3ea;--bg2:#f0eadb;--card:#fffdf8;--line:#e8dfca;--ink:#17261f;--mut:#65746a;--dim:#8d998f;
+  --em:#0f4a37;--em2:#176b50;--gold:#b88a2a;--gold2:#e6c26b;--good:#1d8a57;--bad:#c4392b;--warn:#b7791f;
+  --radius:18px;--sans:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--serif:'Playfair Display',Georgia,'Times New Roman',serif;
+  --shadow:0 1px 0 #fff inset,0 10px 28px -14px rgba(23,60,45,.28),0 1px 3px rgba(23,60,45,.06);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.42}
+body{background:linear-gradient(180deg,#faf6ec 0,#f4efe2 100%) fixed;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:700}
+#app{max-width:780px;margin:0 auto;padding:16px 16px 24px}
+.top{display:flex;align-items:center;justify-content:space-between;margin:2px 0 16px}
+.brand{font-family:var(--serif);font-size:25px;letter-spacing:.1px;font-weight:600}
+.brand b{color:var(--gold);font-style:italic;font-weight:600}
+.sub{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3{font-size:15px;margin-bottom:10px}
+.h2{font-family:var(--serif);font-size:21px;font-weight:600;margin:22px 0 11px;display:flex;align-items:center;gap:10px}
+.h2:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.mut{color:var(--mut)}.gold{color:var(--gold)}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.grow{flex:1;min-width:0}
+.hint{font-size:12px;color:var(--dim)}
+/* hero */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:20px 18px 18px;color:#f7efd9;background:radial-gradient(120% 140% at 0% 0%,#1d7456 0%,#0f4a37 48%,#082a1f 100%);box-shadow:0 18px 40px -18px rgba(8,42,31,.7),0 0 0 1px rgba(230,194,107,.35) inset;margin-bottom:14px;cursor:pointer}
+.hero:before{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(230,194,107,.28);box-shadow:0 0 0 22px rgba(230,194,107,.05),0 0 0 44px rgba(230,194,107,.04)}
+.hero .l{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#d9c48a}
+.hero .v{font-family:var(--serif);font-size:44px;line-height:1.05;margin:8px 0 4px;background:linear-gradient(180deg,#fbe9b1,#e0b855);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:600}
+.hero .s{font-size:13px;color:#cfe0d6}
+.hero .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.hero .mini div{background:rgba(255,255,255,.07);border:1px solid rgba(230,194,107,.2);border-radius:12px;padding:8px 9px}
+.hero .mini b{display:block;font-size:15px;font-family:var(--serif);color:#f7efd9}
+.hero .mini span{font-size:11px;color:#b9cdc2}
+.hero .go{position:absolute;right:16px;bottom:14px;font-size:12px;color:#e6c26b}
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 13px;box-shadow:var(--shadow);cursor:pointer;text-align:left}
+.tile:active,.li:active,.ycol:active{transform:scale(.985)}
+.tile .l{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.9px;font-weight:600}
+.tile .v{font-family:var(--serif);font-size:23px;margin-top:4px;font-weight:600}
+.tile .s{color:var(--dim);font-size:12px;margin-top:2px}
+.tile.arr:after{content:"›";float:right;color:var(--gold);font-size:20px;margin-top:-34px}
+/* year columns */
+.ycols{display:flex;align-items:flex-end;gap:12px;height:190px;padding:6px 2px 0}
+.ycol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;background:none;border:0;padding:0}
+.ycol .bar2{width:100%;border-radius:12px 12px 4px 4px;background:linear-gradient(180deg,var(--gold2),var(--gold));min-height:4px;box-shadow:0 8px 16px -10px rgba(184,138,42,.8)}
+.ycol .val{font-family:var(--serif);font-weight:600;font-size:15px;margin-bottom:5px}
+.ycol .yr{margin-top:6px;font-weight:700;font-size:14px}
+.ycol .cnt{font-size:11px;color:var(--mut)}
+.ycol.on .bar2{background:linear-gradient(180deg,#2a9a74,var(--em))}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:600;border:1px solid var(--line);color:var(--mut);background:var(--bg2);white-space:nowrap}
+.chip.sold{color:var(--good);border-color:#b5dcc6;background:#eef8f1}.chip.active{color:#8a6414;border-color:#e6cd8a;background:#fbf3db}.chip.listed{color:#2f6fb0;border-color:#bcd4ec;background:#eef4fb}.chip.unknown{color:var(--warn);border-color:#ecd6a6;background:#fdf6e3}.chip.personal{color:var(--mut)}
+.bar{height:8px;background:var(--bg2);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px}
+.li{display:block;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.li:last-child{border-bottom:0}
+.li .t{font-weight:700}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(250,246,236,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;background:none;border:0;padding:9px 2px 8px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;cursor:pointer}
+nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav button.on{color:var(--em)}
+nav button.on svg{stroke:var(--em);filter:drop-shadow(0 2px 4px rgba(15,74,55,.25))}
+.tabs{display:flex;gap:7px;overflow-x:auto;margin:0 -16px 13px;padding:2px 16px 4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--mut);cursor:pointer;font-size:13.5px;font-weight:600}
+.tab.on{background:var(--em);border-color:var(--em);color:#f7efd9;box-shadow:0 8px 18px -10px rgba(15,74,55,.8)}
+.tab.cur{border-color:#e6cd8a;background:linear-gradient(180deg,#fff9e8,#fbf0cc);color:#7a5710}
+.tab.cur.on{background:linear-gradient(180deg,#e6c26b,#b88a2a);color:#1a1405;border-color:#b88a2a}
+input,select,textarea{width:100%;background:#fbf8ef;border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,138,42,.15)}
+label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 17px;border-radius:13px;border:1px solid var(--em);background:linear-gradient(180deg,var(--em2),var(--em));color:#f7efd9;font-weight:700;cursor:pointer;box-shadow:0 10px 20px -12px rgba(15,74,55,.9)}
+.btn.ghost{background:none;color:var(--em);box-shadow:none}
+.btn.small{padding:6px 12px;font-size:13px;border-radius:11px}
+.btn.block{width:100%}
+details{border-top:1px solid var(--line)}
+details>summary{list-style:none;cursor:pointer;padding:10px 0}
+details>summary::-webkit-details-marker{display:none}
+table{width:100%;border-collapse:collapse}
+td,th{padding:8px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;font-size:14px}
+td.r,th.r{text-align:right}
+th{color:var(--mut);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px}
+tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
+.note{background:linear-gradient(180deg,#fffaf0,#fbf3de);border:1px solid #efdfb4;border-radius:13px;padding:10px 12px;color:#6b5a2c;font-size:13px;margin-bottom:13px}
+.note.warn{color:#8a5a0c}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.back{background:none;border:0;color:var(--em);padding:4px 0;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:6px}
+.spark{display:block;width:100%;height:34px}
+.x{background:none;border:0;color:var(--bad);cursor:pointer;font-size:17px;padding:0 4px}
+.pass{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}
+.pass dt{color:var(--mut)}.pass dd{margin:0;font-weight:600;text-align:right}
+.est{color:var(--warn);font-size:11px;font-weight:700}
+.stack{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--bg2)}
+/* COVER + PIN */
+#cover{position:fixed;inset:0;z-index:50;background:radial-gradient(110% 70% at 50% 0%,#fff8e6 0%,#f7f1e0 50%,#efe6cf 100%);color:var(--ink);display:flex;flex-direction:column;justify-content:space-between;padding:calc(30px + env(safe-area-inset-top)) 26px calc(22px + env(safe-area-inset-bottom));transition:opacity .6s ease,transform .6s ease;overflow:hidden}
+#cover.hide{opacity:0;transform:translateY(-14px);pointer-events:none}
+#cover .eyebrow{letter-spacing:3.5px;font-size:11px;color:var(--gold);text-transform:uppercase;font-weight:700}
+#cover h1{font-family:var(--serif);font-weight:600;font-size:clamp(44px,13vw,72px);line-height:.98;margin:12px 0 8px;letter-spacing:-1px;color:var(--em)}
+#cover h1 span{color:var(--gold);font-style:italic}
+#cover .tag{font-size:16px;color:var(--mut);max-width:420px}
+#cover .quote{font-family:var(--serif);font-style:italic;font-size:18px;line-height:1.45;color:#3b4a41;max-width:430px;margin-top:18px;border-left:2px solid var(--gold);padding-left:14px}
+#cover .three{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+#cover .three span{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--em);border:1px solid #d9cfae;background:rgba(255,255,255,.5);padding:5px 10px;border-radius:99px;font-weight:700}
+#cover svg.sky{position:absolute;left:0;right:0;bottom:0;width:100%;height:30vh;opacity:.7;pointer-events:none}
+#cover .z{position:relative;z-index:2}
+.pin{display:flex;flex-direction:column;align-items:center;gap:10px}
+.dots{display:flex;gap:14px;height:18px;align-items:center}
+.dots i{width:13px;height:13px;border-radius:50%;border:2px solid var(--em);transition:all .15s}
+.dots i.f{background:var(--em)}
+.dots.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+.pad{display:grid;grid-template-columns:repeat(3,68px);gap:10px 18px;margin-top:4px}
+.pad button{height:56px;border-radius:50%;border:1px solid #d9cfae;background:rgba(255,255,255,.78);font-family:var(--serif);font-size:24px;font-weight:600;color:var(--em);cursor:pointer;box-shadow:0 6px 14px -8px rgba(15,74,55,.5)}
+.pad button:active{background:var(--em);color:#f7efd9}
+.pad .ghost{border-color:transparent;background:none;box-shadow:none;font-size:18px;color:var(--mut)}
+.pinmsg{height:18px;font-size:13px;color:var(--bad);font-weight:600}
+.rem{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--mut);margin:0;font-weight:500}
+.rem input{width:auto}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#cover .z>*{animation:rise .8s both}
+#cover .z>*:nth-child(2){animation-delay:.1s}#cover .z>*:nth-child(3){animation-delay:.2s}#cover .z>*:nth-child(4){animation-delay:.3s}
+@media (max-height:700px){#cover .quote,#cover .three{display:none}.pad button{height:48px}}
+</style>
+</head>
+<body>
+<div id="cover">
+  <svg class="sky" id="sky" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice"></svg>
+  <div class="z">
+    <div class="eyebrow">Флиппинг · Актау · с 2024</div>
+    <h1>Flip<br><span>Ledger</span></h1>
+    <div class="tag">Книга сделок и ремонта — каждый тенге на своём месте.</div>
+    <div class="quote">Прибыль рождается при покупке, но сохраняется — в каждой строке расходов.</div>
+    <div class="three"><span>Купил с головой</span><span>Отремонтировал по смете</span><span>Продал с маржой</span></div>
+  </div>
+  <div class="z pin">
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="pinmsg" id="pinmsg">Введите код</div>
+    <div class="pad" id="pad">
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button>
+      <button class="ghost" disabled></button><button data-k="0">0</button><button class="ghost" data-k="del">⌫</button>
+    </div>
+    <label class="rem"><input type="checkbox" id="rem"> Запомнить на этом телефоне</label>
+  </div>
+</div>
+<div id="app"></div>
+<nav id="nav"></nav>
+<script src="data.enc.js"></script>
+<script>
+(function(){
+'use strict';
+let D=null,RULES=[];
+const KEY='flipledger.v1',TAX_RATE=0.10;
+const GROUPS=['Работы','Черновые','Чистовые','Электрика','Сантехника','Мебель','Техника','Декор','Доставка и мусор','Прочее'];
+const GCOL={'Работы':'#b88a2a','Черновые':'#8a7a60','Чистовые':'#1f8a7d','Электрика':'#d4701a','Сантехника':'#2f6fb0','Мебель':'#7d55b0','Техника':'#b5416a','Декор':'#4f9a4a','Доставка и мусор':'#6b7a88','Прочее':'#8a929a'};
+const ST={sold:'Продан',listed:'В продаже',active:'В ремонте',unknown:'Уточнить статус',personal:'Личный'};
+const TYPES={material:'Материалы',work:'Работа',delivery:'Доставка / мусор',service:'Услуги / документы'};
+const REPAIR_EXCL=['Мебель','Техника'];
+const MON=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+/* ---------- storage ---------- */
+let LS={};
+try{LS=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){LS={}}
+LS.deal=LS.deal||{};LS.meta=LS.meta||{};LS.add=LS.add||{};LS.newObjs=LS.newObjs||[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(LS))}catch(e){}}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>(v===undefined||v===null||v===''||isNaN(+v))?null:+v;
+const money=n=>n==null?'—':Math.round(n).toLocaleString('ru-RU').replace(/[  ]/g,' ')+' ₸';
+const mln=n=>n==null?'—':(n/1e6).toFixed(2).replace('.',',')+' млн';
+const mln1=n=>n==null?'—':(n/1e6).toFixed(1).replace('.',',')+' млн';
+const pct=(a,b)=>b?Math.round(a/b*100)+'%':'0%';
+const sgn=n=>n==null?'—':(n>=0?'+':'−')+mln(Math.abs(n));
+const norm=s=>String(s||'').toLowerCase().replace(/ё/g,'е');
+function ev(str){
+  let s=String(str||'').replace(/[‎  ]/g,' ');
+  if(s.indexOf('=')>-1){const r=s.split('=').pop().replace(/\s/g,'');if(/^\d+$/.test(r))return +r;s=s.split('=')[0];}
+  s=s.replace(/(\d) (?=\d{3}(?!\d))/g,'$1').replace(/\s/g,'').replace(/,/g,'.');
+  if(!/^[\d+\-*.]+$/.test(s))return NaN;
+  try{return Math.round(Function('"use strict";return ('+s+')')())}catch(e){return NaN}
+}
+function classify(name){
+  const n=norm(name);
+  for(const r of RULES){if(r.rx.test(n))return {g:r.g,s:r.s,t:r.t,y:r.y}}
+  return {g:'Прочее',s:'Не распознано',t:String(name).trim(),y:'material'};
+}
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fdate(s){if(!s)return '';const m=/^(\d{4})-(\d\d)(?:-(\d\d))?/.exec(s);return m?(m[3]?m[3]+'.':'')+m[2]+'.'+m[1]:s}
+function toDate(s){if(!s)return null;if(String(s).length===7){const y=+s.slice(0,4),m=+s.slice(5,7);return new Date(y,m,0)}return new Date(s)}
+
+/* ---------- model ---------- */
+function allObjects(){
+  const mk=(o,own)=>Object.assign({},o,LS.meta[o.id]||{},{deal:Object.assign({},o.deal||{},LS.deal[o.id]||{}),items:(o.items||[]).concat(LS.add[o.id]||[]),own});
+  const base=D.objects.map(o=>mk(o,false));
+  const mine=LS.newObjs.map((o,i)=>mk(Object.assign({ord:100+i,src:'app',items:[],deal:{}},o),true));
+  const arr=base.concat(mine);
+  arr.forEach(o=>{if(o.id==='maek'||o.id==='samal-park-192')o.shared=D.shared});
+  return arr.sort((a,b)=>a.ord-b.ord);
+}
+function calc(o){
+  const its=o.items.filter(i=>!i.x);
+  const c={n:its.length,total:0,repair:0,ft:0,byG:{},byS:{},byY:{}};
+  its.forEach(i=>{
+    c.total+=i.a;
+    if(REPAIR_EXCL.indexOf(i.g)>-1)c.ft+=i.a;else c.repair+=i.a;
+    c.byG[i.g]=(c.byG[i.g]||0)+i.a;c.byY[i.y]=(c.byY[i.y]||0)+i.a;
+    const k=i.g+'›'+i.s;c.byS[k]=(c.byS[k]||0)+i.a;
+  });
+  const d=o.deal||{};
+  const buy=num(d.buy),sell=num(d.sell),realtor=num(d.realtor)||0,extra=num(d.extra)||0;
+  const sD=num(d.sellDkp)!=null?num(d.sellDkp):sell,bD=num(d.buyDkp)!=null?num(d.buyDkp):buy;
+  let tax=null;
+  if(num(d.tax)!=null)tax=num(d.tax);
+  else if(sD!=null&&bD!=null)tax=Math.max(0,Math.round(TAX_RATE*(sD-bD)));
+  Object.assign(c,{buy,sell,realtor,extra,tax,sD,bD});
+  c.costs=(buy||0)+c.total+realtor+(tax||0)+extra;
+  c.margin=(buy!=null&&sell!=null)?sell-c.costs:null;
+  c.roi=(c.margin!=null&&c.costs)?c.margin/c.costs:null;
+  c.area=num(o.area);
+  const d1=d.buyDate||o.start,d2=d.sellDate;c.months=null;
+  if(d1&&d2){const m=(toDate(d2)-toDate(d1))/(86400000*30.4);if(m>0.2)c.months=m}
+  c.perMonth=(c.margin!=null&&c.months)?c.margin/c.months:null;
+  c.complete=buy!=null&&sell!=null;
+  c.partial=c.n===0&&!o.norepair;
+  c.valid=o.status==='sold'&&c.margin!=null&&!c.partial;
+  c.year=(d.sellDate||'').slice(0,4);
+  return c;
+}
+function rowsAll(){return allObjects().map(o=>({o,c:calc(o)}))}
+function rowsFlip(){return rowsAll().filter(r=>r.o.status!=='personal')}
+function stats(){
+  const rows=rowsFlip();
+  const sold=rows.filter(r=>r.o.status==='sold');
+  const val=rows.filter(r=>r.c.valid);
+  const sum=(a,f)=>a.reduce((s,r)=>s+f(r),0);
+  const yrs={};
+  sold.forEach(r=>{const y=r.c.year||'—';(yrs[y]=yrs[y]||[]).push(r)});
+  const first=sold.map(r=>r.o.deal.sellDate).filter(Boolean).sort()[0];
+  return {rows,sold,val,yrs,first,
+    earned:sum(val,r=>r.c.margin),revenue:sum(val,r=>r.c.sell),tax:sum(val,r=>r.c.tax||0),realtor:sum(val,r=>r.c.realtor),
+    spent:sum(rows,r=>r.c.total),
+    avgRoi:val.length?sum(val,r=>r.c.roi)/val.length:null,
+    missing:rows.filter(r=>r.o.status!=='active'&&!r.c.complete).length,
+    partial:rows.filter(r=>r.o.status==='sold'&&r.c.partial).length,
+    unrec:rows.reduce((s,r)=>s+r.o.items.filter(i=>!i.x&&(i.s==='Не распознано'||/уточнить/.test(i.s))).length,0)};
+}
+
+/* ---------- state ---------- */
+const S={tab:'home',obj:null,otab:'sum',of:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
+
+/* ---------- components ---------- */
+function bars(map,total){
+  const keys=Object.keys(map).filter(k=>map[k]>0).sort((a,b)=>map[b]-map[a]);
+  return keys.map(k=>`<div style="margin:9px 0"><div class="row"><span><i class="dot" style="background:${GCOL[k]||'#888'}"></i>${esc(k)}</span><span class="num">${money(map[k])} <span class="mut">· ${pct(map[k],total)}</span></span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.max(2,map[k]/total*100)}%;background:${GCOL[k]||'#888'}"></i></div></div>`).join('');
+}
+function spark(vals){
+  if(vals.length<2)return '';
+  const w=300,h=34,mx=Math.max(...vals),mn=Math.min(...vals),r=(mx-mn)||1;
+  const pts=vals.map((v,i)=>[i/(vals.length-1)*(w-8)+4,h-4-(v-mn)/r*(h-8)]);
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline fill="none" stroke="var(--gold)" stroke-width="2" points="${pts.map(p=>p.map(x=>x.toFixed(1)).join(',')).join(' ')}"/>${pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="var(--gold)"/>`).join('')}</svg>`;
+}
+function chip(st){return `<span class="chip ${st}">${ST[st]||st}</span>`}
+function cumChart(deals){
+  if(deals.length<2)return '';
+  let acc=0;const pts=deals.map(r=>{acc+=r.c.margin;return {v:acc,d:r.o.deal.sellDate,n:r.o.name}});
+  const W=340,H=170,pl=8,pr=8,pt=18,pb=26,mx=Math.max(...pts.map(p=>p.v))*1.05;
+  const X=i=>pl+i/(pts.length-1)*(W-pl-pr),Y=v=>H-pb-v/mx*(H-pb-pt);
+  const line=pts.map((p,i)=>X(i).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ');
+  const area=`${X(0)},${H-pb} ${line} ${X(pts.length-1)},${H-pb}`;
+  const lab=(i)=>{const d=pts[i].d;return d?MON[+d.slice(5,7)-1]+' '+d.slice(2,4):''};
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs><linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6c26b" stop-opacity=".55"/><stop offset="1" stop-color="#e6c26b" stop-opacity="0"/></linearGradient></defs>
+  <line x1="${pl}" x2="${W-pr}" y1="${H-pb}" y2="${H-pb}" stroke="var(--line)"/>
+  <polygon points="${area}" fill="url(#gA)"/><polyline points="${line}" fill="none" stroke="#b88a2a" stroke-width="2.6" stroke-linejoin="round"/>
+  ${pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.6" fill="#fffdf8" stroke="#b88a2a" stroke-width="2"/>`).join('')}
+  <text x="${pl}" y="${H-8}" font-size="10" fill="#8d998f">${lab(0)}</text><text x="${W-pr}" y="${H-8}" font-size="10" fill="#8d998f" text-anchor="end">${lab(pts.length-1)}</text>
+  <text x="${X(pts.length-1)}" y="${Y(pts[pts.length-1].v)-9}" font-size="12" font-weight="700" fill="#0f4a37" text-anchor="end">${mln1(pts[pts.length-1].v)}</text></svg>`;
+}
+function dealRow(r,extra){
+  const c=r.c,o=r.o;
+  return `<div class="li" data-act="open" data-id="${o.id}"><div class="row"><span class="t grow">${esc(o.name)}</span><span class="num ${c.margin==null||c.partial?'mut':c.margin>=0?'good':'bad'}"><b>${c.margin==null?'—':sgn(c.margin)+(c.partial?'*':'')}</b></span></div>
+  <div class="row hint" style="margin-top:3px"><span>${o.deal.sellDate?'продан '+fdate(o.deal.sellDate):ST[o.status]}${o.area?' · '+o.area+' м²':''}${o.typ?' · '+esc(o.typ):''}</span><span>${extra||''}</span></div>
+  <div class="hint" style="margin-top:2px">${c.buy!=null?mln(c.buy):'?'} → ${c.sell!=null?mln(c.sell):'?'}${c.roi!=null&&!c.partial?' · ROI '+(c.roi*100).toFixed(0)+'%':''}</div></div>`;
+}
+
+/* ---------- HOME ---------- */
+function vHome(){
+  const s=stats();
+  const act=s.rows.filter(r=>r.o.status==='active');
+  const years=Object.keys(s.yrs).filter(y=>y!=='—').sort();
+  let h=`<div class="top"><div><div class="brand">Flip <b>Ledger</b></div><div class="sub">Книга сделок и ремонта</div></div><button class="btn ghost small" data-act="lock">Закрыть</button></div>`;
+  h+=`<div class="hero" data-act="go" data-t="ana" data-sub="dyn"><div class="l">Заработано с начала флиппинга</div><div class="v">${mln(s.earned)}</div><div class="s">${s.val.length} сделок с расчётом${s.first?' · с '+fdate(s.first):''}</div>
+   <div class="mini"><div><b>${mln1(s.revenue)}</b><span>выручка</span></div><div><b>${s.val.length?mln(s.earned/s.val.length):'—'}</b><span>средняя маржа</span></div><div><b>${s.avgRoi!=null?(s.avgRoi*100).toFixed(0)+'%':'—'}</b><span>средний ROI</span></div></div><div class="go">динамика ›</div></div>`;
+  if(years.length){
+    const mx=Math.max(1,...years.map(y=>s.yrs[y].filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0)));
+    h+=`<div class="h2">По годам</div><div class="card"><div class="ycols">${years.map(y=>{const rs=s.yrs[y],p=rs.filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0);return `<button class="ycol" data-act="year" data-y="${y}"><div class="val">${mln1(p)}</div><div class="bar2" style="height:${Math.max(4,p/mx*120)}px"></div><div class="yr">${y}</div><div class="cnt">${rs.length} ${rs.length===1?'квартира':rs.length<5?'квартиры':'квартир'}</div></button>`}).join('')}</div><div class="hint" style="margin-top:8px">Нажмите на год — список сделок и итоги</div></div>`;
+  }
+  h+=`<div class="tiles">
+   <button class="tile arr" data-act="go" data-t="objects"><div class="l">Объектов</div><div class="v">${s.rows.length}</div><div class="s">продано ${s.sold.length} · в ремонте ${act.length}</div></button>
+   <button class="tile arr" data-act="go" data-t="exp"><div class="l">Всего расходов</div><div class="v">${mln1(s.spent)}</div><div class="s">ремонт, мебель, техника</div></button>
+   <button class="tile arr" data-act="go" data-t="ana" data-sub="rank"><div class="l">Налоги</div><div class="v">${mln(s.tax)}</div><div class="s">уплачено по сделкам</div></button>
+   <button class="tile arr" data-act="go" data-t="ana" data-sub="seg"><div class="l">Риелторы</div><div class="v">${mln(s.realtor)}</div><div class="s">комиссии по сделкам</div></button></div>`;
+  if(s.partial||s.missing||s.unrec){
+    h+=`<div class="note">`+(s.partial?`У <b>${s.partial}</b> проданного объекта пока нет привязанных расходов (отмечены *) — их маржа в итоги не входит.<br>`:'')+(s.unrec?`<b>${s.unrec}</b> позиций в «Прочее» без чёткой группы — подскажите, куда отнести.`:'')+`</div>`;
+  }
+  h+=`<div class="h2">Сейчас в работе</div>`;
+  if(!act.length)h+=`<div class="card"><div class="mut">Нет объекта в статусе «В ремонте». <button class="btn small" data-act="newobj" style="margin-left:6px">+ Объект</button></div></div>`;
+  act.forEach(r=>{
+    const o=r.o,c=r.c,bud=num(o.budget),last=o.items.filter(i=>!i.x).slice(-6).reverse();
+    let days='';if(o.start){const dd=Math.round((Date.now()-new Date(o.start))/86400000);if(dd>=0)days=` · ${dd} дн.`}
+    h+=`<div class="card" style="cursor:pointer" data-act="open" data-id="${o.id}"><div class="row"><div class="grow"><h3 style="margin:0;font-size:17px">${esc(o.name)}</h3><div class="sub">${o.area?o.area+' м² · ':''}${o.start?'ремонт с '+fdate(o.start)+days:'старт не указан'}</div></div><div class="num" style="font-family:var(--serif);font-size:22px;font-weight:600">${money(c.total)}</div></div>
+     <div class="hint" style="margin-top:6px">${c.buy!=null?'куплена за '+mln(c.buy):'цена покупки не указана'}${c.n?' · '+c.n+' поз. расходов':' · расходы ещё не внесены'}</div>
+     ${bud?`<div style="margin-top:10px"><div class="row hint"><span>Смета ${money(bud)}</span><span class="${c.total>bud?'bad':''}">${pct(c.total,bud)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,c.total/bud*100)}%;background:${c.total>bud?'var(--bad)':'var(--gold)'}"></i></div></div>`:''}
+     ${c.total?`<div style="margin-top:8px">${bars(c.byG,c.total)}</div><div class="hint" style="margin-top:8px">Последние: ${last.slice(0,3).map(i=>esc(i.n)).join(' · ')}</div>`:''}</div>`;
+  });
+  h+=`<div class="h2">Все объекты</div><div class="card">${s.rows.map(r=>dealRow(r)).join('')}</div>`;
+  const gm={};s.rows.forEach(r=>{for(const g in r.c.byG)gm[g]=(gm[g]||0)+r.c.byG[g]});
+  h+=`<div class="h2">Куда уходят деньги</div><div class="card">${bars(gm,s.spent)}</div>`;
+  h+=`<div class="h2">Данные</div><div class="card"><div class="hint" style="margin-bottom:8px">Цены сделок и расходы, введённые в приложении, хранятся на этом телефоне. Сохраняйте резервную копию.</div><div class="grid2"><button class="btn ghost" data-act="export">Скачать копию</button><button class="btn ghost" data-act="import">Загрузить копию</button></div><input type="file" id="impf" accept="application/json" style="display:none"></div>`;
+  return h;
+}
+
+/* ---------- OBJECTS ---------- */
+function vObjects(){
+  let rows=rowsAll();
+  const cnt={all:rows.length,active:rows.filter(r=>r.o.status==='active').length,sold:rows.filter(r=>r.o.status==='sold').length};
+  if(S.ofl==='active')rows=rows.filter(r=>r.o.status==='active');
+  else if(S.ofl==='sold')rows=rows.filter(r=>r.o.status==='sold');
+  let h=`<div class="top"><div><div class="brand">Объекты</div><div class="sub">${cnt.all} в книге</div></div><button class="btn small" data-act="newobj">+ Объект</button></div>
+  <div class="tabs">${[['all','Все'],['active','В ремонте'],['sold','Проданные']].map(t=>`<button class="tab ${S.ofl===t[0]?'on':''}" data-act="ofl" data-f="${t[0]}">${t[1]} · ${cnt[t[0]]}</button>`).join('')}</div><div class="card">`;
+  h+=rows.map(r=>dealRow(r,chip(r.o.status))).join('')||'<div class="mut">Пусто</div>';
+  return h+`</div>`;
+}
+function vNewObj(){
+  return `<button class="back" data-act="tab" data-t="objects">← Объекты</button><div class="card"><h3>Новый объект</h3>
+  <label>Название (ЖК, дом, квартира)</label><input id="no_name" placeholder="например: Самал 18-31">
+  <div class="grid2"><div><label>Дата начала ремонта</label><input id="no_start" type="date" value="${today()}"></div><div><label>Статус</label><select id="no_st"><option value="active">В ремонте</option><option value="listed">В продаже</option><option value="sold">Продан</option></select></div></div>
+  <div class="grid2"><div><label>Цена покупки, ₸</label><input id="no_buy" inputmode="numeric"></div><div><label>Площадь, м²</label><input id="no_area" inputmode="decimal"></div></div>
+  <label>Смета на ремонт, ₸ (необязательно)</label><input id="no_bud" inputmode="numeric">
+  <div style="margin-top:14px"><button class="btn block" data-act="savenew">Создать</button></div></div>`;
+}
+function vObject(){
+  const o=allObjects().find(x=>x.id===S.obj);if(!o){S.obj=null;return vObjects()}
+  const c=calc(o);
+  let h=`<button class="back" data-act="tab" data-t="objects">← Объекты</button>
+  <div class="row"><div class="grow"><div class="brand" style="font-size:26px">${esc(o.name)}</div><div class="sub">${esc(o.adr||'')}</div></div>${chip(o.status)}</div>
+  <div class="tabs" style="margin-top:12px">${[['sum','Итоги'],['items','Расходы'],['deal','Сделка']].map(t=>`<button class="tab ${S.otab===t[0]?'on':''}" data-act="otab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if(S.otab==='sum')h+=objSum(o,c);else if(S.otab==='items')h+=objItems(o,c);else h+=objDeal(o,c);
+  return h;
+}
+function passport(o,c){
+  const d=o.deal||{};
+  const R=(k,v)=>v?`<dt>${k}</dt><dd>${v}</dd>`:'';
+  return `<div class="card"><h3>Паспорт объекта</h3><dl class="pass">
+   ${R('Адрес',esc(o.adr))}${R('Тип',esc(o.typ))}${R('Площадь',o.area?o.area+' м²':'')}${R('Подъезд',esc(o.ent))}${R('Этаж',esc(o.floor))}
+   ${R('Купили за (факт)',c.buy!=null?money(c.buy):'')}${R('Покупка в ДКП',d.buyDkp!=null&&d.buyDkp!==''?money(d.buyDkp):'')}
+   ${R('Продали за (факт)',c.sell!=null?money(c.sell):'')}${R('Продажа в ДКП',d.sellDkp!=null&&d.sellDkp!==''?money(d.sellDkp):'')}
+   ${R('Дата продажи',d.sellDate?fdate(d.sellDate):'')}${R('Ремонт начат',o.start?fdate(o.start):'')}
+   ${R('Риелтор',o.status==='sold'||d.realtor?(c.realtor?money(c.realtor):'без риелтора'):'')}${R('Налог',c.tax!=null&&(o.status==='sold'||d.sellDkp)?(c.tax?money(c.tax):'нет'):'')}
+   ${R('Цена за м²',c.area&&c.sell?money(c.sell/c.area)+' (продажа)':(c.area&&c.buy?money(c.buy/c.area)+' (покупка)':''))}
+  </dl>${o.dnote?`<div class="note" style="margin:12px 0 0">${esc(o.dnote)}</div>`:''}${o.chat?`<div class="hint" style="margin-top:8px">В чате расходов: «${esc(o.chat)}»</div>`:''}</div>`;
+}
+function pnl(o,c){
+  const L=(t,v,cls,b)=>`<tr${b?' class="total"':''}><td>${t}</td><td class="r num ${cls||''}">${v}</td></tr>`;
+  const baseNote=(c.sD!=null&&c.bD!=null&&num(o.deal.tax)==null)?` <span class="hint">(${mln(c.sD)} − ${mln(c.bD)})×10%</span>`:'';
+  return `<table>
+   ${L('Цена покупки',c.buy!=null?money(c.buy):'<span class="warn">заполнить</span>')}
+   ${L('Ремонт (без мебели и техники)',money(c.repair))}
+   ${L('Мебель и техника',money(c.ft))}
+   ${L('Риелтор',money(c.realtor))}
+   ${L('Налог'+baseNote,c.tax!=null?money(c.tax):'—')}
+   ${c.extra?L('Прочие затраты',money(c.extra)):''}
+   ${L('Всего затрат',money(c.costs),'',1)}
+   ${L('Цена продажи',c.sell!=null?money(c.sell):'<span class="warn">заполнить</span>')}
+   ${L('Маржа (чистая)',c.margin==null?'—':(c.margin>=0?'+':'−')+money(Math.abs(c.margin)),c.margin==null?'':c.margin>=0?'good':'bad',1)}
+  </table>`;
+}
+function objSum(o,c){
+  let h=passport(o,c);
+  if(c.partial&&o.status==='sold')h+=`<div class="note warn">Расходы на ремонт по этому объекту пока не привязаны — маржа ниже завышена (без ремонта).</div>`;
+  h+=`<div class="card"><h3>Результат сделки</h3>${pnl(o,c)}
+  <div class="grid2" style="margin-top:12px">
+   <div class="tile" style="cursor:default"><div class="l">ROI</div><div class="v">${c.roi!=null?(c.roi*100).toFixed(1).replace('.',',')+'%':'—'}</div></div>
+   <div class="tile" style="cursor:default"><div class="l">Маржа / мес</div><div class="v">${c.perMonth!=null?mln(c.perMonth):'—'}</div><div class="s">${c.months?'срок ≈ '+c.months.toFixed(1).replace('.',',')+' мес.':'от старта ремонта до продажи'}</div></div>
+   ${c.area&&c.repair?`<div class="tile" style="cursor:default"><div class="l">Ремонт на м²</div><div class="v">${money(c.repair/c.area)}</div></div>`:''}
+   ${c.area&&c.margin!=null&&!c.partial?`<div class="tile" style="cursor:default"><div class="l">Маржа на м²</div><div class="v">${money(c.margin/c.area)}</div></div>`:''}
+  </div>${c.complete?'':'<div class="note" style="margin:12px 0 0">Чтобы увидеть маржу, откройте «Сделка» и впишите цены покупки и продажи.</div>'}</div>`;
+  if(c.total){
+    h+=`<div class="card"><h3>Расходы по группам</h3>${bars(c.byG,c.total)}</div>`;
+    h+=`<div class="card"><h3>Материалы и работа</h3>${Object.keys(c.byY).map(k=>`<div class="row" style="padding:4px 0"><span>${TYPES[k]||k}</span><span class="num">${money(c.byY[k])} <span class="mut">· ${pct(c.byY[k],c.total)}</span></span></div>`).join('')}</div>`;
+    h+=`<div class="card"><h3>Детали по группам</h3>`+GROUPS.filter(g=>c.byG[g]).sort((a,b)=>c.byG[b]-c.byG[a]).map(g=>{
+      const subs=Object.keys(c.byS).filter(k=>k.split('›')[0]===g).sort((a,b)=>c.byS[b]-c.byS[a]);
+      return `<details><summary class="row"><span><i class="dot" style="background:${GCOL[g]}"></i><b>${g}</b></span><span class="num">${money(c.byG[g])}</span></summary>${subs.map(k=>`<div class="row hint" style="padding:3px 0 3px 16px"><span>${esc(k.split('›')[1])}</span><span class="num">${money(c.byS[k])}</span></div>`).join('')}</details>`}).join('')+`</div>`;
+  }
+  if(o.shared)h+=`<div class="note">Мебель Маэка и Самала 192 закупалась общим списком на ${money(o.shared.reduce((s,i)=>s+i.a,0))}. Детализация (${o.shared.length} поз.) есть в поиске материалов; в суммы объектов входят только строки «Мебель».</div>`;
+  return h;
+}
+function objItems(o,c){
+  const g=S.of,q=norm(S.oq);
+  let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1));
+  const sum=items.reduce((s,i)=>s+i.a,0),shown=items.slice(0,S.olim);
+  let h=`<details class="card" style="border-top:1px solid var(--line)"><summary class="gold" style="padding:0"><b>+ Добавить расход</b></summary>${addForm(o)}</details>
+  <input id="oq" placeholder="Поиск по расходам объекта" value="${esc(S.oq)}" style="margin-bottom:10px">
+  <div class="tabs"><button class="tab ${!g?'on':''}" data-act="of" data-g="">Все</button>${GROUPS.filter(x=>c.byG[x]).map(x=>`<button class="tab ${g===x?'on':''}" data-act="of" data-g="${x}">${x}</button>`).join('')}</div>
+  <div class="row hint" style="margin-bottom:6px"><span>${items.length} поз.</span><span class="num">итого ${money(sum)}</span></div><div class="card">`;
+  h+=shown.map(i=>`<div class="li" style="cursor:default"><div class="row"><span class="grow">${esc(i.n)}${i.est?' <span class="est">ОЦЕНКА</span>':''}</span><span class="num">${money(i.a)}</span></div><div class="row hint"><span><i class="dot" style="background:${GCOL[i.g]}"></i>${i.g} › ${esc(i.s)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.d?' · '+fdate(i.d):''}</span>${i.add?`<button class="x" data-act="delitem" data-id="${o.id}" data-i="${i.add}">×</button>`:''}</div></div>`).join('')||'<div class="mut">Расходов пока нет</div>';
+  h+=`</div>`;
+  if(items.length>shown.length)h+=`<button class="btn ghost block" data-act="more">Показать ещё (${items.length-shown.length})</button>`;
+  return h;
+}
+function addForm(o){
+  return `<div style="margin-top:8px"><label>Что куплено</label><input id="ae_n" placeholder="например: иранский 20 мешков" autocomplete="off">
+  <div class="grid2"><div><label>Сумма, ₸ (можно 12000+3000)</label><input id="ae_a" inputmode="text" placeholder="0"></div><div><label>Дата</label><input id="ae_d" type="date" value="${today()}"></div></div>
+  <label>Группа <span class="hint" id="ae_hint">определится по названию</span></label><select id="ae_g"><option value="">Авто</option>${GROUPS.map(g=>`<option>${g}</option>`).join('')}</select>
+  <div style="margin-top:12px"><button class="btn block" data-act="additem" data-id="${o.id}">Добавить</button></div></div>`;
+}
+function objDeal(o,c){
+  const d=o.deal||{};
+  const f=(id,l,v,ph)=>`<div><label>${l}</label><input data-deal="${id}" inputmode="numeric" value="${v==null?'':esc(v)}" placeholder="${ph||''}"></div>`;
+  const m=(id,l,v,ph,inp)=>`<div><label>${l}</label><input data-meta="${id}" ${inp?'inputmode="'+inp+'"':''} value="${esc(v||'')}" placeholder="${ph||''}"></div>`;
+  return `<div class="card"><h3>Покупка и продажа</h3>
+   <div class="grid2">${f('buy','Купил за, ₸ (факт)',d.buy)}${f('sell','Продал за, ₸ (факт)',d.sell)}</div>
+   <div class="grid2">${f('buyDkp','Покупка в ДКП, ₸',d.buyDkp,'если иная')}${f('sellDkp','Продажа в ДКП, ₸',d.sellDkp,'если иная')}</div>
+   <div class="grid2">${f('realtor','Риелтор, ₸',d.realtor,'0')}${f('tax','Налог вручную, ₸',d.tax,'авто')}</div>
+   <div class="grid2">${f('extra','Прочие затраты, ₸',d.extra,'коммуналка и др.')}<div><label>Месяц покупки</label><input type="month" data-deal="buyDate" value="${esc(d.buyDate||'')}"></div></div>
+   <div class="grid2"><div><label>Месяц продажи</label><input type="month" data-deal="sellDate" value="${esc(d.sellDate||'')}"></div><div></div></div>
+   <div class="hint" style="margin-top:8px">Налог по умолчанию: 10% × (продажа в ДКП − покупка в ДКП). Если в ДКП цены те же, что фактические, поля ДКП можно не заполнять.</div></div>
+  <div class="card"><h3>Паспорт</h3>
+   ${m('name','Название',o.name)}${m('adr','Адрес (мкр, дом, квартира)',o.adr)}
+   <div class="grid2">${m('typ','Тип (двушка, евротрёшка…)',o.typ)}${m('area','Площадь, м²',o.area,'','decimal')}</div>
+   <div class="grid2">${m('ent','Подъезд',o.ent)}${m('floor','Этаж',o.floor)}</div>
+   <div class="grid2"><div><label>Статус</label><select data-meta="status">${Object.keys(ST).map(k=>`<option value="${k}" ${o.status===k?'selected':''}>${ST[k]}</option>`).join('')}</select></div><div><label>Начало ремонта</label><input type="date" data-meta="start" value="${esc(o.start||'')}"></div></div>
+   ${m('budget','Смета на ремонт, ₸',o.budget,'','numeric')}
+  </div>
+  <div class="card"><h3>Предварительный итог</h3><div id="dealPrev">${pnl(o,c)}</div></div>`;
+}
+
+/* ---------- EXPENSES ---------- */
+function vExpenses(){
+  const E=S.exp,all=allObjects();
+  const cur=all.filter(o=>o.status==='active');
+  let objs=all.filter(o=>E.personal||o.status!=='personal');
+  if(E.scope!=='all')objs=objs.filter(o=>o.id===E.scope);
+  const pool=[];objs.forEach(o=>o.items.forEach(i=>{if(!i.x)pool.push(Object.assign({o:o.name,oid:o.id},i))}));
+  const total=pool.reduce((s,i)=>s+i.a,0);
+  const keyf={g:i=>i.g,s:i=>i.g+' › '+i.s,y:i=>TYPES[i.y]||i.y,o:i=>i.o}[E.by];
+  const map={},cnt={};pool.forEach(i=>{const k=keyf(i);map[k]=(map[k]||0)+i.a;cnt[k]=(cnt[k]||0)+1});
+  const keys=Object.keys(map).sort((a,b)=>map[b]-map[a]);
+  let h=`<div class="top"><div><div class="brand">Расходы</div><div class="sub">группировки и детализация</div></div></div>
+  <div class="hint" style="margin-bottom:6px">Текущие ремонты — одним нажатием:</div>
+  <div class="tabs"><button class="tab ${E.scope==='all'?'on':''}" data-act="scope" data-id="all">Все объекты</button>${cur.map(o=>`<button class="tab cur ${E.scope===o.id?'on':''}" data-act="scope" data-id="${o.id}">${esc(o.name)}</button>`).join('')}</div>
+  <select id="exp_scope" style="margin-bottom:10px"><option value="all">Все объекты</option>${all.map(o=>`<option value="${o.id}" ${E.scope===o.id?'selected':''}>${esc(o.name)}</option>`).join('')}</select>
+  <div class="tabs">${[['g','Группы'],['s','Подгруппы'],['y','Материал / работа'],['o','Объекты']].map(t=>`<button class="tab ${E.by===t[0]?'on':''}" data-act="by" data-b="${t[0]}">${t[1]}</button>`).join('')}</div>
+  <div class="card"><div class="row" style="margin-bottom:8px"><b>Итого</b><b class="num">${money(total)}</b></div>`;
+  if(!keys.length)h+=`<div class="mut">Расходов пока нет.</div>`;
+  h+=keys.map(k=>{
+    const g=E.by==='g'?k:(E.by==='s'?k.split(' › ')[0]:null);
+    return `<div style="padding:9px 0;border-top:1px solid var(--line);cursor:pointer" data-act="drill" data-k="${esc(k)}"><div class="row"><span class="grow">${g?`<i class="dot" style="background:${GCOL[g]}"></i>`:''}${esc(k)} <span class="hint">· ${cnt[k]}</span></span><span class="num">${money(map[k])}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.max(2,map[k]/total*100)}%;background:${g?GCOL[g]:'var(--gold)'}"></i></div></div>${E.drill===k?drillList(pool.filter(i=>keyf(i)===k),E.by):''}`}).join('');
+  h+=`</div><label style="display:flex;gap:8px;align-items:center;margin-top:0"><input type="checkbox" id="exp_pers" style="width:auto" ${E.personal?'checked':''}> Учитывать личный дом (не флиппинг)</label>`;
+  return h;
+}
+function drillList(items,by){
+  items=items.slice().sort((a,b)=>b.a-a.a);
+  return `<div style="background:var(--bg2);border-radius:12px;padding:6px 10px;margin:6px 0">${items.slice(0,80).map(i=>`<div style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)}${by==='g'?' › '+esc(i.s):''}</div></div>`).join('')}${items.length>80?`<div class="hint" style="padding:6px 0">…и ещё ${items.length-80} (смотрите в карточке объекта)</div>`:''}</div>`;
+}
+
+/* ---------- MATERIALS ---------- */
+function allPurchases(){
+  const out=[];
+  allObjects().forEach(o=>{
+    o.items.forEach(i=>out.push(Object.assign({o:o.name,oid:o.id,ord:o.ord},i)));
+    if(o.id==='maek'&&o.shared)o.shared.forEach(i=>out.push(Object.assign({o:'Маэк / Самал 192 (общий список мебели)',oid:o.id,ord:o.ord+.5},i)));
+  });
+  return out;
+}
+function vMaterials(){
+  const M=S.mat,P=allPurchases().filter(i=>i.y!=='work'&&i.y!=='delivery');
+  const cntTag={};P.forEach(i=>{if(!i.x)cntTag[i.t]=(cntTag[i.t]||0)+1});
+  const pop=Object.keys(cntTag).filter(t=>cntTag[t]>=3).sort((a,b)=>cntTag[b]-cntTag[a]).slice(0,18);
+  let h=`<div class="top"><div><div class="brand">Материалы</div><div class="sub">история цен: сколько и за сколько покупали</div></div></div>
+  <input id="mq" placeholder="Поиск: ротбонд, иранский, кафель*клей…" value="${esc(M.q)}" style="margin-bottom:10px" autocomplete="off">
+  <div class="tabs"><button class="tab ${!M.g?'on':''}" data-act="mg" data-g="">Все группы</button>${GROUPS.map(g=>`<button class="tab ${M.g===g?'on':''}" data-act="mg" data-g="${g}">${g}</button>`).join('')}</div>`;
+  if(!M.q&&!M.g){
+    h+=`<div class="hint" style="margin-bottom:8px">Часто покупаемое — нажмите:</div><div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px">${pop.map(t=>`<button class="tab" data-act="mq" data-q="${esc(t)}">${esc(t)} · ${cntTag[t]}</button>`).join('')}</div><div class="note">Введите название — покажу все покупки по объектам: сумма, количество, цена за единицу и динамику. Знак * — любые символы.</div>`;
+    return h;
+  }
+  const terms=norm(M.q).split(/\s+/).filter(Boolean).map(t=>new RegExp(t.replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*')));
+  const res=P.filter(i=>(!M.g||i.g===M.g)&&terms.every(r=>r.test(norm(i.n+' '+i.t+' '+i.s+' '+i.g))));
+  const by={};res.forEach(i=>{(by[i.t]=by[i.t]||[]).push(i)});
+  const keys=Object.keys(by).sort((a,b)=>by[b].length-by[a].length);
+  h+=`<div class="hint" style="margin:4px 0 8px">${res.length} покупок · ${keys.length} видов</div>`;
+  h+=keys.slice(0,40).map(k=>{
+    const arr=by[k].slice().sort((a,b)=>a.ord-b.ord),real=arr.filter(i=>!i.x),am=real.map(i=>i.a),sum=am.reduce((s,v)=>s+v,0),pr=arr.filter(i=>i.p).map(i=>i.p);
+    return `<details class="card" style="padding:0"><summary style="padding:13px 15px"><div class="row"><b class="grow">${esc(k)}</b><span class="num">${money(sum)}</span></div><div class="hint">${arr.length} покупок${am.length?` · от ${money(Math.min(...am))} до ${money(Math.max(...am))}, средняя ${money(sum/am.length)}`:''}${pr.length?` · цена ед.: ${money(Math.min(...pr))}–${money(Math.max(...pr))}`:''}</div>${spark(am)}</summary>
+    <div style="padding:0 15px 10px">${arr.map(i=>`<div style="padding:7px 0;border-top:1px solid var(--line)"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)} › ${esc(i.g)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.x?' · детализация общей закупки':''}</div></div>`).join('')}</div></details>`}).join('');
+  if(keys.length>40)h+=`<div class="hint">Показаны первые 40 видов — уточните запрос.</div>`;
+  return h;
+}
+
+/* ---------- ANALYTICS ---------- */
+function validDeals(){return rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate).sort((a,b)=>(a.o.deal.sellDate+a.o.ord).localeCompare(b.o.deal.sellDate+b.o.ord))}
+function vAnalytics(){
+  const A=S.ana;
+  let h=`<div class="top"><div><div class="brand">Анализ</div><div class="sub">как растёт бизнес</div></div></div>
+  <div class="tabs">${[['dyn','Динамика'],['rank','Рейтинг'],['seg','Сегменты'],['calc','Калькулятор']].map(t=>`<button class="tab ${A.sub===t[0]&&!A.year?'on':''}" data-act="ana" data-sub="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if(A.year)return h+anaYear(A.year);
+  if(A.sub==='dyn')return h+anaDyn();
+  if(A.sub==='rank')return h+anaRank();
+  if(A.sub==='seg')return h+anaSeg();
+  return h+anaCalc();
+}
+function anaDyn(){
+  const s=stats(),deals=validDeals(),years=Object.keys(s.yrs).filter(y=>y!=='—').sort();
+  let h=`<div class="hero" style="cursor:default"><div class="l">Общая прибыль</div><div class="v">${mln(s.earned)}</div><div class="s">${s.val.length} сделок · выручка ${mln1(s.revenue)}${s.first?' · с '+fdate(s.first):''}</div>
+  <div class="mini"><div><b>${s.val.length?mln(s.earned/s.val.length):'—'}</b><span>на сделку</span></div><div><b>${mln(s.tax)}</b><span>налоги</span></div><div><b>${mln(s.realtor)}</b><span>риелторы</span></div></div></div>`;
+  h+=`<div class="h2">Рост капитала</div><div class="card"><div class="hint" style="margin-bottom:6px">Накопленная прибыль по месяцам продаж</div>${cumChart(deals)}</div>`;
+  const mx=Math.max(1,...years.map(y=>s.yrs[y].filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0)));
+  h+=`<div class="h2">По годам</div><div class="card"><div class="ycols">${years.map(y=>{const rs=s.yrs[y],p=rs.filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0);return `<button class="ycol" data-act="year" data-y="${y}"><div class="val">${mln1(p)}</div><div class="bar2" style="height:${Math.max(4,p/mx*120)}px"></div><div class="yr">${y}</div><div class="cnt">${rs.length} сделок</div></button>`}).join('')}</div>
+  <table style="margin-top:12px"><tr><th>Год</th><th class="r">Сделок</th><th class="r">Выручка</th><th class="r">Прибыль</th></tr>${years.map(y=>{const rs=s.yrs[y],v=rs.filter(r=>r.c.valid);return `<tr style="cursor:pointer" data-act="year" data-y="${y}"><td><b>${y}</b> ›</td><td class="r">${rs.length}</td><td class="r num">${mln1(v.reduce((a,r)=>a+r.c.sell,0))}</td><td class="r num good"><b>${mln(v.reduce((a,r)=>a+r.c.margin,0))}</b></td></tr>`}).join('')}</table></div>`;
+  // structure of revenue
+  const T=s.val.reduce((a,r)=>{a.sell+=r.c.sell;a.buy+=r.c.buy;a.rep+=r.c.total;a.tax+=r.c.tax||0;a.rl+=r.c.realtor;a.ex+=r.c.extra;a.m+=r.c.margin;return a},{sell:0,buy:0,rep:0,tax:0,rl:0,ex:0,m:0});
+  const parts=[['Покупка',T.buy,'#8a7a60'],['Ремонт, мебель, техника',T.rep,'#b88a2a'],['Налог',T.tax,'#c4392b'],['Риелтор',T.rl,'#2f6fb0'],['Прочее',T.ex,'#8a929a'],['Прибыль',T.m,'#1d8a57']].filter(p=>p[1]>0);
+  h+=`<div class="h2">Куда уходит выручка</div><div class="card"><div class="stack">${parts.map(p=>`<i style="width:${p[1]/T.sell*100}%;background:${p[2]}"></i>`).join('')}</div>
+  ${parts.map(p=>`<div class="row" style="padding:6px 0"><span><i class="dot" style="background:${p[2]}"></i>${p[0]}</span><span class="num">${mln(p[1])} <span class="mut">· ${pct(p[1],T.sell)}</span></span></div>`).join('')}<div class="hint">Сумма продаж ${mln(T.sell)} по ${s.val.length} сделкам с расчётом</div></div>`;
+  return h;
+}
+function anaYear(y){
+  const rs=rowsFlip().filter(r=>r.c.year===y).sort((a,b)=>(a.o.deal.sellDate||'').localeCompare(b.o.deal.sellDate||''));
+  const v=rs.filter(r=>r.c.valid);
+  const p=v.reduce((a,r)=>a+r.c.margin,0);
+  const m={};v.forEach(r=>{const k=r.o.deal.sellDate.slice(5,7);m[k]=(m[k]||0)+r.c.margin});
+  let h=`<button class="back" data-act="year" data-y="">← Динамика</button><div class="hero" style="cursor:default"><div class="l">${y} год</div><div class="v">${mln(p)}</div><div class="s">${rs.length} продано · выручка ${mln1(v.reduce((a,r)=>a+r.c.sell,0))}</div>
+  <div class="mini"><div><b>${v.length?mln(p/v.length):'—'}</b><span>на сделку</span></div><div><b>${v.length?(v.reduce((a,r)=>a+r.c.roi,0)/v.length*100).toFixed(0)+'%':'—'}</b><span>ср. ROI</span></div><div><b>${v.reduce((a,r)=>a+(r.c.area||0),0)} м²</b><span>продано</span></div></div></div>`;
+  h+=`<div class="h2">Сделки ${y}</div><div class="card">${rs.map(r=>dealRow(r)).join('')}</div>`;
+  const ks=Object.keys(m).sort();
+  if(ks.length)h+=`<div class="card"><h3>По месяцам</h3>${ks.map(k=>`<div class="row" style="padding:5px 0"><span>${MON[+k-1]} ${y}</span><span class="num good">${sgn(m[k])}</span></div>`).join('')}</div>`;
+  return h;
+}
+function anaRank(){
+  const K=S.ana.rk;
+  const M={margin:['Маржа',r=>r.c.margin,v=>sgn(v)],roi:['ROI',r=>r.c.roi*100,v=>v.toFixed(0)+'%'],mm2:['Маржа на м²',r=>r.c.area?r.c.margin/r.c.area:null,v=>money(v)],rep:['Ремонт на м²',r=>r.c.area&&r.c.repair?r.c.repair/r.c.area:null,v=>money(v)],pm:['Маржа в месяц',r=>r.c.perMonth,v=>mln(v)],sell:['Цена продажи за м²',r=>r.c.area?r.c.sell/r.c.area:null,v=>money(v)]};
+  const [nm,f,fm]=M[K];
+  const list=rowsFlip().filter(r=>r.c.valid).map(r=>({r,v:f(r)})).filter(x=>x.v!=null).sort((a,b)=>b.v-a.v);
+  const mx=Math.max(1,...list.map(x=>Math.abs(x.v)));
+  let h=`<div class="tabs">${Object.keys(M).map(k=>`<button class="tab ${K===k?'on':''}" data-act="rk" data-k="${k}">${M[k][0]}</button>`).join('')}</div><div class="card">`;
+  h+=list.map((x,i)=>`<div class="li" data-act="open" data-id="${x.r.o.id}"><div class="row"><span class="grow"><span class="gold" style="font-family:var(--serif);font-weight:700;margin-right:6px">${i+1}</span><b>${esc(x.r.o.name)}</b></span><span class="num"><b>${fm(x.v)}</b></span></div><div class="bar" style="margin-top:6px"><i style="width:${Math.max(3,Math.abs(x.v)/mx*100)}%;background:${i===0?'var(--gold)':'var(--em2)'}"></i></div><div class="hint" style="margin-top:3px">${x.r.o.area?x.r.o.area+' м² · ':''}продан ${fdate(x.r.o.deal.sellDate)}</div></div>`).join('')||'<div class="mut">Нет данных для этого показателя</div>';
+  h+=`</div><div class="hint">${K==='pm'?'Срок считается от начала ремонта до месяца продажи, поэтому только для объектов с датой старта.':K==='rep'?'Чем меньше, тем дешевле ремонт на метр.':'Нажмите на объект, чтобы открыть его паспорт и расходы.'}</div>`;
+  return h;
+}
+function seg(rows,keyf,title){
+  const g={};rows.forEach(r=>{const k=keyf(r);if(!k)return;(g[k]=g[k]||[]).push(r)});
+  const keys=Object.keys(g).sort((a,b)=>g[b].reduce((s,r)=>s+r.c.margin,0)-g[a].reduce((s,r)=>s+r.c.margin,0));
+  return `<div class="card"><h3>${title}</h3><table><tr><th></th><th class="r">Сделок</th><th class="r">Ср. маржа</th><th class="r">Всего</th></tr>${keys.map(k=>{const a=g[k],t=a.reduce((s,r)=>s+r.c.margin,0);return `<tr><td><b>${esc(k)}</b></td><td class="r">${a.length}</td><td class="r num">${mln(t/a.length)}</td><td class="r num good">${mln(t)}</td></tr>`}).join('')}</table></div>`;
+}
+function anaSeg(){
+  const v=rowsFlip().filter(r=>r.c.valid);
+  return seg(v,r=>r.o.mkr?r.o.mkr+' мкр':'',  'По микрорайонам')+seg(v,r=>r.o.typ||'',  'По типу квартиры')+seg(v,r=>r.c.realtor>0?'С риелтором':'Без риелтора','Риелтор')+seg(v,r=>(r.c.tax||0)>0?'С налогом':'Без налога','Налог')+seg(v,r=>r.c.year,'По годам')+`<div class="hint">Только проданные объекты с расчётом маржи (${v.length}).</div>`;
+}
+function anaCalc(){
+  const rep=rowsFlip().filter(r=>r.c.repair>0&&r.o.status==='sold'&&!r.c.partial),avgRep=rep.length?rep.reduce((s,r)=>s+r.c.total,0)/rep.length:0,C=S.calc;
+  return `<div class="card"><h3>Калькулятор маржи</h3><div class="hint" style="margin-bottom:6px">Затраты = покупка + ремонт + риелтор; налог 10% с разницы цен в ДКП.</div>
+  <div class="grid2"><div><label>Купить за, ₸</label><input data-calc="buy" inputmode="numeric" value="${esc(C.buy)}"></div><div><label>Ремонт, ₸ <span class="hint">(средний ${mln(avgRep)})</span></label><input data-calc="repair" inputmode="numeric" value="${esc(C.repair)}" placeholder="${Math.round(avgRep)}"></div></div>
+  <div class="grid2"><div><label>Продать за, ₸</label><input data-calc="sell" inputmode="numeric" value="${esc(C.sell)}"></div><div><label>Риелтор, ₸</label><input data-calc="realtor" inputmode="numeric" value="${esc(C.realtor)}"></div></div>
+  <div class="grid2"><div><label>Покупка в ДКП</label><input data-calc="buyDkp" inputmode="numeric" value="${esc(C.buyDkp)}" placeholder="как факт"></div><div><label>Продажа в ДКП</label><input data-calc="sellDkp" inputmode="numeric" value="${esc(C.sellDkp)}" placeholder="как факт"></div></div>
+  <div id="calcOut" style="margin-top:12px">${calcOut()}</div></div>`;
+}
+function calcOut(){
+  const C=S.calc,buy=num(C.buy),sell=num(C.sell);
+  if(buy==null||sell==null)return '<div class="hint">Введите цену покупки и продажи.</div>';
+  const rep=num(C.repair)!=null?num(C.repair):0,rl=num(C.realtor)||0,bD=num(C.buyDkp)!=null?num(C.buyDkp):buy,sD=num(C.sellDkp)!=null?num(C.sellDkp):sell;
+  const tax=Math.max(0,Math.round(TAX_RATE*(sD-bD))),costs=buy+rep+rl+tax,m=sell-costs;
+  return `<table><tr><td>Затраты (покупка + ремонт + риелтор)</td><td class="r num">${money(buy+rep+rl)}</td></tr><tr><td>Налог</td><td class="r num">${money(tax)}</td></tr><tr class="total"><td>Маржа</td><td class="r num ${m>=0?'good':'bad'}">${m>=0?'+':'−'}${money(Math.abs(m))}</td></tr><tr><td>ROI</td><td class="r num">${(m/costs*100).toFixed(1).replace('.',',')}%</td></tr></table>`;
+}
+
+/* ---------- render ---------- */
+const ICONS={home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',objects:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',exp:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',mat:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',ana:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>'};
+const TABS=[['home','Обзор','home'],['objects','Объекты','objects'],['exp','Расходы','exp'],['mat','Материалы','mat'],['ana','Анализ','ana']];
+function render(keep){
+  const y=window.scrollY;let h;
+  if(S.tab==='newobj')h=vNewObj();
+  else if(S.tab==='objects')h=S.obj?vObject():vObjects();
+  else if(S.tab==='exp')h=vExpenses();
+  else if(S.tab==='mat')h=vMaterials();
+  else if(S.tab==='ana')h=vAnalytics();
+  else h=vHome();
+  $('#app').innerHTML=h;
+  $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
+  window.scrollTo(0,keep?y:0);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el)return;
+  const a=el.dataset.act;
+  if(a==='tab'){S.tab=el.dataset.t;if(S.tab==='objects')S.obj=null;if(S.tab==='ana')S.ana.year=null;render()}
+  else if(a==='go'){S.tab=el.dataset.t;S.obj=null;if(el.dataset.sub){S.ana.sub=el.dataset.sub;S.ana.year=null}render()}
+  else if(a==='open'){S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;render()}
+  else if(a==='otab'){S.otab=el.dataset.t;S.of='';S.oq='';S.olim=60;render()}
+  else if(a==='ofl'){S.ofl=el.dataset.f;render(true)}
+  else if(a==='of'){S.of=el.dataset.g;S.olim=60;render(true)}
+  else if(a==='more'){S.olim+=100;render(true)}
+  else if(a==='scope'){S.exp.scope=el.dataset.id;S.exp.drill=null;render(true)}
+  else if(a==='by'){S.exp.by=el.dataset.b;S.exp.drill=null;render(true)}
+  else if(a==='drill'){S.exp.drill=S.exp.drill===el.dataset.k?null:el.dataset.k;render(true)}
+  else if(a==='mg'){S.mat.g=el.dataset.g;render(true)}
+  else if(a==='mq'){S.mat.q=el.dataset.q;render()}
+  else if(a==='ana'){S.ana.sub=el.dataset.sub;S.ana.year=null;render()}
+  else if(a==='year'){S.tab='ana';S.ana.sub='dyn';S.ana.year=el.dataset.y||null;render()}
+  else if(a==='rk'){S.ana.rk=el.dataset.k;render(true)}
+  else if(a==='newobj'){S.tab='newobj';render()}
+  else if(a==='savenew'){
+    const name=($('#no_name').value||'').trim();if(!name){$('#no_name').focus();return}
+    const id='o'+Date.now().toString(36);
+    LS.newObjs.push({id,name,start:$('#no_start').value||null,status:$('#no_st').value,area:$('#no_area').value||'',budget:$('#no_bud').value||''});
+    if($('#no_buy').value)LS.deal[id]={buy:+$('#no_buy').value};
+    save();S.tab='objects';S.obj=id;S.otab='items';render();
+  }
+  else if(a==='additem'){
+    const name=($('#ae_n').value||'').trim(),amt=ev($('#ae_a').value);
+    if(!name||isNaN(amt)||amt<=0){alert('Укажите название и сумму');return}
+    const c=classify(name),g=$('#ae_g').value||c.g;
+    const it={n:name,a:amt,g:g,s:c.s,t:c.t,y:c.y,d:$('#ae_d').value||today(),add:Date.now().toString(36)};
+    const id=el.dataset.id;(LS.add[id]=LS.add[id]||[]).push(it);save();render(true);
+  }
+  else if(a==='delitem'){const id=el.dataset.id;LS.add[id]=(LS.add[id]||[]).filter(i=>i.add!==el.dataset.i);save();render(true)}
+  else if(a==='export'){
+    const blob=new Blob([JSON.stringify(LS,null,1)],{type:'application/json'});
+    const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download='flip-ledger-backup-'+today()+'.json';l.click();setTimeout(()=>URL.revokeObjectURL(u),2000);
+  }
+  else if(a==='import'){$('#impf').click()}
+  else if(a==='lock'){try{sessionStorage.removeItem('fl.pin');localStorage.removeItem('fl.pin')}catch(_){}location.reload()}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.id==='impf'&&t.files[0]){
+    const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);LS=Object.assign({deal:{},meta:{},add:{},newObjs:[]},j);save();render();alert('Копия загружена')}catch(_){alert('Не удалось прочитать файл')}};r.readAsText(t.files[0]);
+  }
+  else if(t.id==='exp_scope'){S.exp.scope=t.value;S.exp.drill=null;render(true)}
+  else if(t.id==='exp_pers'){S.exp.personal=t.checked;render(true)}
+  else if(t.dataset.deal){
+    const id=S.obj;LS.deal[id]=LS.deal[id]||{};const v=t.value.trim();
+    if(v==='')LS.deal[id][t.dataset.deal]=null;else LS.deal[id][t.dataset.deal]=/Date$/.test(t.dataset.deal)?v:(isNaN(ev(v))?v:ev(v));
+    save();const o=allObjects().find(x=>x.id===id);const p=$('#dealPrev');if(p)p.innerHTML=pnl(o,calc(o));
+  }
+  else if(t.dataset.meta){
+    const id=S.obj;LS.meta[id]=LS.meta[id]||{};LS.meta[id][t.dataset.meta]=t.value;save();
+    if(['status','name','adr'].indexOf(t.dataset.meta)>-1)render(true);
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='mq'){S.mat.q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
+  else if(t.id==='oq'){S.oq=t.value;S.olim=60;clearTimeout(window._ot);window._ot=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#oq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
+  else if(t.dataset.calc){S.calc[t.dataset.calc]=t.value;const o=$('#calcOut');if(o)o.innerHTML=calcOut()}
+  else if(t.id==='ae_n'){const h=$('#ae_hint');if(h){const c=t.value.trim()?classify(t.value):null;h.textContent=c?('→ '+c.g+' › '+c.s):'определится по названию'}}
+});
+
+/* ---------- cover + PIN ---------- */
+function drawSky(){
+  const svg=$('#sky');let s='',x=-10,seed=11;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+  while(x<410){
+    const w=34+Math.floor(rnd()*30),h=60+Math.floor(rnd()*125),y=200-h;
+    s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(15,74,55,${(.05+rnd()*.07).toFixed(2)})" stroke="rgba(15,74,55,.35)" stroke-width=".8"/>`;
+    for(let wy=y+8;wy<196;wy+=11)for(let wx=x+6;wx<x+w-6;wx+=9){if(rnd()>.74)s+=`<rect x="${wx}" y="${wy}" width="4" height="5.5" fill="#d3a640" opacity="${(.4+rnd()*.5).toFixed(2)}"/>`}
+    x+=w+3+Math.floor(rnd()*6);
+  }
+  svg.innerHTML=s;
+}
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decrypt(pin){
+  const E=window.FLIP_ENC;
+  const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(E.s),iterations:E.it,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['decrypt']);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(E.i)},key,b64(E.c));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function startApp(data){
+  D=data;RULES=(D.rules||[]).map(r=>({rx:new RegExp(r[0],'i'),g:r[1],s:r[2],t:r[3],y:r[4]}));
+  $('#cover').classList.add('hide');render();
+}
+let buf='',busy=false;
+function paint(){document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('f',i<buf.length))}
+async function submit(){
+  if(busy)return;busy=true;$('#pinmsg').style.color='var(--mut)';$('#pinmsg').textContent='Проверяю…';
+  try{
+    if(!window.crypto||!crypto.subtle)throw new Error('nocrypto');
+    const data=await decrypt(buf);
+    try{(($('#rem').checked)?localStorage:sessionStorage).setItem('fl.pin',buf)}catch(_){}
+    busy=false;startApp(data);
+  }catch(e){
+    busy=false;$('#pinmsg').style.color='var(--bad)';
+    $('#pinmsg').textContent=(e&&e.message==='nocrypto')?'Откройте приложение по https-ссылке':'Неверный код';
+    const d=$('#dots');d.classList.remove('shake');void d.offsetWidth;d.classList.add('shake');buf='';paint();
+  }
+}
+function press(k){
+  if(busy)return;
+  if(k==='del'){buf=buf.slice(0,-1)}
+  else if(/^\d$/.test(k)&&buf.length<4){buf+=k}
+  paint();if(buf.length===4)submit();
+}
+$('#pad').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)press(b.dataset.k)});
+document.addEventListener('keydown',e=>{if($('#cover').classList.contains('hide'))return;if(/^\d$/.test(e.key))press(e.key);else if(e.key==='Backspace')press('del')});
+drawSky();
+(async function boot(){
+  let pin=null;try{pin=sessionStorage.getItem('fl.pin')||localStorage.getItem('fl.pin')}catch(_){}
+  if(pin&&window.crypto&&crypto.subtle){try{const data=await decrypt(pin);startApp(data);}catch(e){try{sessionStorage.removeItem('fl.pin');localStorage.removeItem('fl.pin')}catch(_){}}}
+  if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+})();
+})();
+</script>
+</body>
+</html>
