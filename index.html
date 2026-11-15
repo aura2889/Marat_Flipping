@@ -40,6 +40,11 @@ h1,h2,h3{margin:0;font-weight:700}
 .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .grow{flex:1;min-width:0}
 .hint{font-size:12px;color:var(--dim)}
+.goalhero{border-radius:24px;padding:22px 18px 18px;color:#f7efd9;background:radial-gradient(120% 140% at 0% 0%,#1d7456 0%,#0f4a37 50%,#0a3629 100%);box-shadow:0 22px 40px -22px rgba(15,74,55,.7);position:relative;overflow:hidden}
+.goalhero:before{content:"";position:absolute;right:-70px;top:-70px;width:240px;height:240px;border-radius:50%;border:1px solid rgba(230,194,107,.3);box-shadow:0 0 0 26px rgba(230,194,107,.05)}
+.goalhero .gl{font-size:11px;letter-spacing:2.4px;text-transform:uppercase;color:#d9c48a}
+.goalhero .gv{font-family:var(--serif);font-weight:800;font-size:clamp(30px,10vw,44px);line-height:1.05;margin:10px 0 4px;background:linear-gradient(180deg,#fbe9b1,#e0b855);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.goalhero .gs{font-size:13px;color:#cfe0d6}
 /* hero */
 .hero{position:relative;overflow:hidden;border-radius:24px;padding:20px 18px 18px;color:#f7efd9;background:radial-gradient(120% 140% at 0% 0%,#1d7456 0%,#0f4a37 48%,#082a1f 100%);box-shadow:0 18px 40px -18px rgba(8,42,31,.7),0 0 0 1px rgba(230,194,107,.35) inset;margin-bottom:14px;cursor:pointer}
 .hero:before{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(230,194,107,.28);box-shadow:0 0 0 22px rgba(230,194,107,.05),0 0 0 44px rgba(230,194,107,.04)}
@@ -75,8 +80,9 @@ h1,h2,h3{margin:0;font-weight:700}
 .li:last-child{border-bottom:0}
 .li .t{font-weight:700}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(250,246,236,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;background:none;border:0;padding:9px 2px 8px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;cursor:pointer}
+nav button{flex:1;min-width:0;background:none;border:0;padding:9px 2px 8px;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;cursor:pointer}
 nav button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:400px){nav button{font-size:9.5px;letter-spacing:-.2px}nav button svg{width:21px;height:21px}}
 nav button.on{color:var(--em)}
 nav button.on svg{stroke:var(--em);filter:drop-shadow(0 2px 4px rgba(15,74,55,.25))}
 .tabs{display:flex;gap:7px;overflow-x:auto;margin:0 -16px 13px;padding:2px 16px 4px;scrollbar-width:none}
@@ -166,7 +172,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=14"></script>
+<script src="data.enc.js?v=16"></script>
 <script>
 (function(){
 'use strict';
@@ -678,9 +684,141 @@ function calcOut(){
   return `<table><tr><td>Затраты (покупка + ремонт + риелтор)</td><td class="r num">${money(buy+rep+rl)}</td></tr><tr><td>Налог</td><td class="r num">${money(tax)}</td></tr><tr class="total"><td>Маржа</td><td class="r num ${m>=0?'good':'bad'}">${m>=0?'+':'−'}${money(Math.abs(m))}</td></tr><tr><td>ROI</td><td class="r num">${(m/costs*100).toFixed(1).replace('.',',')}%</td></tr></table>`;
 }
 
+/* ---------- GOAL ---------- */
+const GOAL_T=500e6,BORN=new Date(1989,3,28),MONTHS=['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+const GP=[
+ {id:'now',name:'Как сейчас',d:'2 ремонта · пауза между сделками',n:2,T:3,gap:1.4},
+ {id:'two',name:'2 без пауз',d:'2 ремонта, сразу следующая покупка',n:2,T:3,gap:0},
+ {id:'three',name:'3 с паузами',d:'3 ремонта параллельно',n:3,T:3,gap:1.4},
+ {id:'three0',name:'3 без пауз',d:'3 ремонта по 3 мес — 12 продаж в год',n:3,T:3,gap:0},
+ {id:'four',name:'4 параллельно',d:'нужен большой оборотный капитал',n:4,T:3,gap:1},
+ {id:'big2',name:'2 крупных',d:'2 объекта по 45 млн',n:2,T:3.5,gap:1,K:45e6}
+];
+const GCOLS=['#8a929a','#2f6fb0','#7d55b0','#d4701a','#1f8a7d','#c2678b','#b88a2a'];
+function goalHist(){
+  const rows=rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate),by={};
+  rows.forEach(r=>{const y=r.o.deal.sellDate.slice(0,4);(by[y]=by[y]||{n:0,m:0,cost:0});by[y].n++;by[y].m+=r.c.margin;by[y].cost+=r.c.costs});
+  return by;
+}
+function goalP(){
+  const g=LS.goal||{};
+  const p=Object.assign({roi:.15,dep:.15,sal:7e6,K:27e6,Kmax:60e6,scale:false,infl:false,inflRate:.08,cap0:null,sel:'now',custom:{n:2,T:3,gap:1,K:null}},g);
+  if(p.cap0==null){
+    const by=goalHist(),m=Object.keys(by).reduce((s,y)=>s+by[y].m,0),now=new Date(),yrs=Math.max(0,(now-new Date(2025,0,1))/(365.25*86400000));
+    p.cap0=Math.round(26e6+m+p.sal*yrs);p.cap0Auto=true;
+  }
+  return p;
+}
+function goalSet(k,v){LS.goal=LS.goal||{};LS.goal[k]=v;save()}
+function goalScen(p,s){return Object.assign({},s,{K:s.K||p.K})}
+function goalSim(p,s){
+  s=goalScen(p,s);
+  const dt=.25,maxT=40*12,sl=[];for(let i=0;i<s.n;i++)sl.push({rem:0,inv:0,wait:0});
+  const now=new Date(),m0=now.getMonth()+now.getDate()/30.4;
+  let cash=p.cap0,t=0,reach=null;const yrs={},series=[p.cap0];
+  const tgt=tt=>GOAL_T*(p.infl?Math.pow(1+p.inflRate,tt/12):1);
+  const tseries=[GOAL_T];
+  while(t<maxT){
+    const yi=Math.floor((m0+t)/12),Y=yrs[yi]||(yrs[yi]={deals:0,dp:0,dep:0,sal:0});
+    const inte=cash*p.dep/12*dt;cash+=inte;Y.dep+=inte;
+    const sa=p.sal/12*dt;cash+=sa;Y.sal+=sa;
+    for(const x of sl){
+      if(x.inv>0){x.rem-=dt;if(x.rem<=1e-9){const pr=x.inv*p.roi;cash+=x.inv+pr;Y.dp+=pr;Y.deals++;x.inv=0;x.wait=s.gap}}
+      else{x.wait-=dt;if(x.wait<=1e-9){const cap=cash+sl.reduce((a,z)=>a+z.inv,0),Kc=p.scale?Math.min(p.Kmax,Math.max(s.K,.6*cap/s.n)):s.K,inv=Math.min(Kc,cash);if(inv>=.5*Kc){cash-=inv;x.inv=inv;x.rem=s.T}}}
+    }
+    t+=dt;
+    const cap=cash+sl.reduce((a,z)=>a+z.inv,0);
+    if(Math.abs(t-Math.round(t))<1e-9){series.push(cap);tseries.push(tgt(t))}
+    if(reach==null&&cap>=tgt(t)){reach=t;break}
+  }
+  const used=sl.reduce((a,z)=>a+z.inv,0);
+  let sumDp=0,sumDep=0,sumSal=0;Object.keys(yrs).forEach(k=>{sumDp+=yrs[k].dp;sumDep+=yrs[k].dep;sumSal+=yrs[k].sal});
+  return {s,reach,series,tseries,yrs,m0,y0:now.getFullYear(),perYear:s.n*12/(s.T+s.gap),inWork:s.n*(p.scale?Math.min(p.Kmax,Math.max(s.K,.6*p.cap0/s.n)):s.K),sumDp,sumDep,sumSal,final:series[series.length-1]};
+}
+function goalDate(r){
+  if(r.reach==null)return null;
+  const d=new Date();d.setMonth(d.getMonth()+Math.round(r.reach));
+  const age=Math.floor((d-BORN)/(365.25*86400000));
+  return {d,txt:MONTHS[d.getMonth()]+' '+d.getFullYear(),age,yrs:Math.floor(r.reach/12),mo:Math.round(r.reach%12)};
+}
+function agew(n){const a=n%100,b=n%10;return n+' '+(a>=11&&a<=14?'лет':b===1?'год':b>=2&&b<=4?'года':'лет')}
+function goalScens(p){
+  const list=GP.map(s=>Object.assign({},s)).concat([Object.assign({id:'custom',name:'Свой сценарий',d:'настройте ниже'},p.custom)]);
+  return list.map((s,i)=>({s,col:GCOLS[i%GCOLS.length],r:goalSim(p,s)}));
+}
+function goalChart(sc,p,selId){
+  const W=360,H=210,L=34,R=10,T0=10,B=26;
+  const maxY=Math.max(...sc.map(x=>x.r.reach==null?x.r.series.length:x.r.reach),12);
+  const H12=Math.min(40*12,Math.ceil(Math.max(...sc.map(x=>x.r.reach==null?480:x.r.reach))/12)*12+12);
+  const X=m=>L+(W-L-R)*m/H12,Yv=v=>T0+(H-T0-B)*(1-Math.min(v,GOAL_T*1.08)/(GOAL_T*1.08));
+  let g='';
+  [0,100,200,300,400,500].forEach(v=>{g+=`<line x1="${L}" x2="${W-R}" y1="${Yv(v*1e6)}" y2="${Yv(v*1e6)}" stroke="#e8dfca" stroke-width="1"/><text x="${L-4}" y="${Yv(v*1e6)+3}" text-anchor="end" font-size="9" fill="#8d998f">${v}</text>`});
+  const y0=new Date().getFullYear(),step=H12/12>20?10:(H12/12>10?5:2);
+  for(let k=0;k*12<=H12;k+=step){g+=`<text x="${X(k*12)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#8d998f">${y0+k}</text>`}
+  const tp=sc[0].r.tseries.map((v,i)=>i<=H12?X(i)+','+Yv(v):'').filter(Boolean).join(' ');
+  g+=`<polyline points="${tp}" fill="none" stroke="#c4392b" stroke-width="1.4" stroke-dasharray="4 3"/><text x="${W-R}" y="${Yv(GOAL_T)-4}" text-anchor="end" font-size="9" fill="#c4392b" font-weight="700">500 млн</text>`;
+  sc.slice().sort((a,b)=>(a.s.id===selId)-(b.s.id===selId)).forEach(x=>{
+    const sel=x.s.id===selId,pts=x.r.series.map((v,i)=>i<=H12?X(i)+','+Yv(v):'').filter(Boolean).join(' ');
+    g+=`<polyline points="${pts}" fill="none" stroke="${x.col}" stroke-width="${sel?3:1.6}" opacity="${sel?1:.7}" stroke-linejoin="round"/>`;
+    if(x.r.reach!=null)g+=`<circle cx="${X(x.r.reach)}" cy="${Yv(GOAL_T)}" r="${sel?5:3.5}" fill="${x.col}" stroke="#fff" stroke-width="1.5"/>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${g}</svg>`;
+}
+function goalOutHtml(){
+  const p=goalP(),sc=goalScens(p);let cur=sc.find(x=>x.s.id===p.sel)||sc[0];
+  const gd=goalDate(cur.r),by=goalHist(),hy=Object.keys(by).sort();
+  const sorted=sc.slice().sort((a,b)=>(a.r.reach==null?1e9:a.r.reach)-(b.r.reach==null?1e9:b.r.reach));
+  const fx=n=>(Math.round(n*10)/10).toString().replace('.',',');
+  let h=`<div class="hero" style="cursor:default"><div class="l">${esc(cur.s.name)}</div><div class="v" style="font-size:${gd?34:26}px">${gd?gd.txt:'дольше 40 лет'}</div><div class="s">${gd?`цель достигнута · тебе будет <b>${agew(gd.age)}</b> · через ${gd.yrs?agew(gd.yrs)+' ':''}${gd.mo?gd.mo+' мес':''}`:'при таких параметрах цель не достигается'}${p.infl?'<br>с учётом инфляции '+Math.round(p.inflRate*100)+'% в год':''}</div>
+  <div class="mini"><div><b>${fx(cur.r.perYear)}</b><span>продаж в год</span></div><div><b>${fx(cur.r.perYear/12)}</b><span>в месяц</span></div><div><b>${mln(cur.r.inWork)}</b><span>в оборот</span></div></div></div>`;
+  h+=`<div class="card"><h3>Капитал по сценариям</h3>${goalChart(sc,p,cur.s.id)}<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px">${sc.map(x=>`<span style="font-size:12px;cursor:pointer;font-weight:${x.s.id===cur.s.id?800:500}" data-act="gsel" data-id="${x.s.id}"><i class="dot" style="background:${x.col}"></i>${esc(x.s.name)}</span>`).join('')}</div><div class="hint" style="margin-top:6px">Красная линия — цель 500 млн. Кружок — когда сценарий её достигает.</div></div>`;
+  h+=`<div class="card"><h3>Когда цель, по сценариям</h3><table><tr><th>Сценарий</th><th class="r">Продаж / год</th><th class="r">Цель</th></tr>${sorted.map(x=>{const d=goalDate(x.r);return `<tr data-act="gsel" data-id="${x.s.id}" style="cursor:pointer;${x.s.id===cur.s.id?'background:rgba(230,194,107,.18)':''}"><td><i class="dot" style="background:${x.col}"></i><b>${esc(x.s.name)}</b><div class="hint">${esc(x.s.d||'')}</div></td><td class="r num">${fx(x.r.perYear)}<div class="hint">${fx(x.r.perYear/12)} в мес</div></td><td class="r num"><b>${d?d.d.getFullYear():'40+'}</b><div class="hint">${d?agew(d.age):''}</div></td></tr>`}).join('')}</table></div>`;
+  // composition + yearly
+  const ks=Object.keys(cur.r.yrs).map(Number).sort((a,b)=>a-b);
+  const capEnd={};let run=p.cap0;
+  ks.forEach(k=>{const Y=cur.r.yrs[k];run+=Y.dp+Y.dep+Y.sal;capEnd[k]=run});
+  if(gd)h+=`<div class="card"><h3>Из чего сложатся 500 млн</h3>${[['Капитал сейчас',p.cap0,'#8a7a60'],['Прибыль от квартир',cur.r.sumDp,'#1d8a57'],['Проценты по депозиту',cur.r.sumDep,'#2f6fb0'],['Моя зарплата',cur.r.sumSal,'#b88a2a']].map(x=>`<div style="margin:8px 0"><div class="row"><span><i class="dot" style="background:${x[2]}"></i>${x[0]}</span><span class="num">${mln(x[1])} <span class="mut">· ${Math.round(x[1]/GOAL_T*100)}%</span></span></div><div class="bar" style="margin-top:4px"><i style="width:${Math.max(2,x[1]/cur.r.final*100)}%;background:${x[2]}"></i></div></div>`).join('')}</div>`;
+  h+=`<details class="card"><summary><b>По годам — ${esc(cur.s.name)}</b></summary><table style="margin-top:8px"><tr><th>Год</th><th class="r">Продаж</th><th class="r">Квартиры</th><th class="r">Депозит</th><th class="r">Капитал</th></tr>${ks.map(k=>{const Y=cur.r.yrs[k],yr=cur.r.y0+k-Math.floor(cur.r.m0/12);return `<tr><td><b>${yr}</b><div class="hint">${agew(yr-1989-(yr>=1989?0:0)+0)}</div></td><td class="r num">${Y.deals}</td><td class="r num">${mln(Y.dp)}</td><td class="r num">${mln(Y.dep)}</td><td class="r num"><b>${mln(capEnd[k])}</b></td></tr>`}).join('')}</table></details>`;
+  return h;
+}
+function goalChipsHtml(){
+  const p=goalP();
+  return [...GP,{id:'custom',name:'Свой'}].map(s=>`<button class="tab ${p.sel===s.id?'on':''}" data-act="gsel" data-id="${s.id}">${esc(s.name)}</button>`).join('');
+}
+function vGoal(){
+  const p=goalP(),by=goalHist(),hy=Object.keys(by).sort(),now=new Date();
+  const cur=goalScen(p,p.sel==='custom'?p.custom:(GP.find(x=>x.id===p.sel)||GP[0]));
+  const pct0=Math.min(100,p.cap0/GOAL_T*100);
+  let capr=26e6;const hrows=hy.map((y,ix)=>{const b=by[y],salY=y==='2024'?0:(y===String(now.getFullYear())?p.sal*(now.getMonth()+1)/12:p.sal);capr+=b.m+salY;return {y,n:b.n,m:b.m,sal:salY,cap:capr,roi:b.m/b.cost}});
+  const rows=rowsFlip().filter(r=>r.c.valid),months=rows.map(r=>r.c.months).filter(Boolean);
+  const totM=rows.reduce((s,r)=>s+r.c.margin,0),totC=rows.reduce((s,r)=>s+r.c.costs,0),first=rows.filter(r=>r.o.deal.sellDate).map(r=>r.o.deal.sellDate).sort()[0];
+  const yrsActive=first?Math.max(1,(now-toDate(first))/(365.25*86400000)+.25):2;
+  const fx=n=>(Math.round(n*10)/10).toString().replace('.',',');
+  let h=`<div class="goalhero"><div class="gl">Главная цель семьи</div><div class="gv">500 000 000 ₸</div><div class="gs">500 миллионов — наш общий капитал</div><div class="bar" style="margin:14px 0 6px;background:rgba(255,255,255,.18)"><i style="width:${pct0}%;background:linear-gradient(90deg,#fbe9b1,#e0b855)"></i></div><div class="row" style="font-size:13px;color:#cfe0d6"><span>сейчас ≈ ${mln1(p.cap0)} · ${pct0.toFixed(0)}%</span><span>осталось ${mln1(GOAL_T-p.cap0)}</span></div></div>
+  <div id="goalOut" style="margin-top:14px">${goalOutHtml()}</div>
+  <div class="card"><h3>Сценарий</h3><div class="tabs" id="gChips" style="flex-wrap:wrap;overflow:visible;margin-bottom:6px">${goalChipsHtml()}</div>
+  <div class="grid2"><div><label>Ремонтов параллельно</label><input data-gp="n" inputmode="decimal" value="${cur.n}"></div><div><label>Цикл: покупка → продажа, мес</label><input data-gp="T" inputmode="decimal" value="${cur.T}"></div></div>
+  <div class="grid2"><div><label>Пауза до следующей покупки, мес</label><input data-gp="gap" inputmode="decimal" value="${cur.gap}"></div><div><label>Размер объекта, млн ₸</label><input data-gp="K" inputmode="decimal" value="${cur.K/1e6}"></div></div></div>
+  <div class="card"><h3>Общие условия</h3>
+  <div class="grid2"><div><label>Капитал сейчас, млн ₸ ${p.cap0Auto?'<span class="hint">(расчёт)</span>':''}</label><input data-gg="cap0" inputmode="decimal" value="${Math.round(p.cap0/1e5)/10}"></div><div><label>Прибыль с объекта, % за сделку</label><input data-gg="roi" inputmode="decimal" value="${Math.round(p.roi*1000)/10}"></div></div>
+  <div class="grid2"><div><label>Депозит, % годовых</label><input data-gg="dep" inputmode="decimal" value="${Math.round(p.dep*1000)/10}"></div><div><label>Зарплата чистыми в год, млн</label><input data-gg="sal" inputmode="decimal" value="${p.sal/1e6}"></div></div>
+  <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-gt="scale" style="width:auto" ${p.scale?'checked':''}> Крупнее объекты по мере роста капитала (до 60 млн)</label>
+  <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" data-gt="infl" style="width:auto" ${p.infl?'checked':''}> Учитывать инфляцию 8% в год (500 млн в сегодняшних деньгах)</label>
+  <div class="hint" style="margin-top:10px">Свободные деньги лежат на депозите, в квартиры деньги уходят при покупке и возвращаются с прибылью при продаже. Налоги и риелтор уже вычтены из прибыли с объекта. Для справки: средняя прибыль по твоим сделкам ${(totM/totC*100).toFixed(1).replace('.',',')}% за сделку, за 2026 год ${by['2026']?(by['2026'].m/by['2026'].cost*100).toFixed(1).replace('.',','):'—'}%.</div></div>
+  <div class="card"><h3>Мой путь с 2024 года</h3><div class="hint" style="margin-bottom:6px">Старт 26 млн ₸ в 2024. Капитал = старт + прибыль от продаж + зарплата (проценты по депозиту и личные траты не учтены).</div>
+  <table><tr><th>Год</th><th class="r">Продаж</th><th class="r">Прибыль</th><th class="r">Капитал</th></tr><tr><td><b>Старт</b></td><td></td><td></td><td class="r num"><b>26,00 млн</b></td></tr>${hrows.map(x=>`<tr data-act="year" data-y="${x.y}" style="cursor:pointer"><td><b>${x.y}</b> ›<div class="hint">+ зарплата ${mln(x.sal)}</div></td><td class="r num">${x.n}</td><td class="r num">${mln(x.m)}<div class="hint">ROI ${(x.roi*100).toFixed(1).replace('.',',')}%</div></td><td class="r num"><b>${mln(x.cap)}</b></td></tr>`).join('')}</table></div>
+  <div class="card"><h3>Моя скорость</h3><div class="grid2">
+  <div class="tile" style="cursor:default"><div class="l">Продано квартир</div><div class="v">${rows.length}</div><div class="s">за ${fx(yrsActive)} г.</div></div>
+  <div class="tile" style="cursor:default"><div class="l">Продаж в год</div><div class="v">${fx(rows.length/yrsActive)}</div><div class="s">${fx(rows.length/yrsActive/12)} в месяц</div></div>
+  <div class="tile" style="cursor:default"><div class="l">Ремонт до продажи</div><div class="v">${months.length?fx(months.reduce((a,b)=>a+b,0)/months.length):'—'} мес</div><div class="s">по ${months.length} объектам с датой</div></div>
+  <div class="tile" style="cursor:default"><div class="l">Прибыль на сделку</div><div class="v">${mln(totM/rows.length)}</div><div class="s">затраты ${mln(totC/rows.length)} на объект</div></div></div></div>
+  <div class="note" style="margin-top:0">Это прогноз, а не обещание: считаем по твоим цифрам. Рынок, цены и скорость продаж могут измениться, поэтому лучше смотреть сразу несколько сценариев.</div>`;
+  return h;
+}
+
 /* ---------- render ---------- */
-const ICONS={tax:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',objects:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',exp:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',mat:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',ana:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>'};
-const TABS=[['home','Обзор','home'],['objects','Объекты','objects'],['exp','Расходы','exp'],['tax','Налоги','tax'],['mat','Материалы','mat'],['ana','Анализ','ana']];
+const ICONS={goal:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',tax:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',home:'<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',objects:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>',exp:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',mat:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',ana:'<path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/>'};
+const TABS=[['home','Обзор','home'],['objects','Объекты','objects'],['exp','Расходы','exp'],['tax','Налоги','tax'],['mat','Материалы','mat'],['ana','Анализ','ana'],['goal','Цель','goal']];
 function render(keep){
   const y=window.scrollY;let h;
   if(S.tab==='newobj')h=vNewObj();
@@ -689,7 +827,8 @@ function render(keep){
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v14 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else if(S.tab==='goal')h=vGoal();
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v16 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -719,6 +858,7 @@ document.addEventListener('click',e=>{
   else if(a==='ana'){S.ana.sub=el.dataset.sub;S.ana.year=null;render()}
   else if(a==='year'){S.tab='ana';S.ana.sub='dyn';S.ana.year=el.dataset.y||null;render()}
   else if(a==='rk'){S.ana.rk=el.dataset.k;render(true)}
+  else if(a==='gsel'){goalSet('sel',el.dataset.id);render(true)}
   else if(a==='taxy'){S.tab='tax';S.tax.y=el.dataset.y;render()}
   else if(a==='cmpm'){S.ana.cm=el.dataset.m;render(true)}
   else if(a==='cmpg'){S.ana.cg=el.dataset.g||null;render(true)}
@@ -767,6 +907,9 @@ document.addEventListener('input',e=>{
   const t=e.target;
   if(t.id==='mq'){S.mat.q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.id==='oq'){S.oq=t.value;S.olim=60;clearTimeout(window._ot);window._ot=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#oq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
+  else if(t.dataset.gp){const p=goalP(),cur=goalScen(p,p.sel==='custom'?p.custom:(GP.find(x=>x.id===p.sel)||GP[0])),v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)&&v>0){const base={n:cur.n,T:cur.T,gap:cur.gap,K:cur.K};base[t.dataset.gp]=t.dataset.gp==='K'?v*1e6:(t.dataset.gp==='n'?Math.max(1,Math.round(v)):v);goalSet('custom',base);goalSet('sel','custom');const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml();const ch=$('#gChips');if(ch)ch.innerHTML=goalChipsHtml()}}
+  else if(t.dataset.gg){const k=t.dataset.gg,v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)){goalSet(k,(k==='cap0'||k==='sal')?v*1e6:v/100);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}}
+  else if(t.dataset.gt){goalSet(t.dataset.gt,t.checked);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}
   else if(t.dataset.taxpaid!==undefined){const y=t.dataset.taxpaid;LS.taxPaid=LS.taxPaid||{};const v=t.value.trim();LS.taxPaid[y]=v===''?null:(isNaN(ev(v))?0:ev(v));save();const rs=rowsFlip().filter(r=>r.o.status==='sold'&&(r.o.deal.sellDate||'').slice(0,4)===y);const a=rs.reduce((s,r)=>s+(r.c.tax||0),0),l=a-taxPaid(y),e=$('#taxLeft');if(e){e.textContent=money(l);e.style.color=l>0?'var(--bad)':'var(--good)'}}
   else if(t.dataset.tf){S.tax.fc[t.dataset.tf]=t.value;const r=rowsFlip().find(x=>x.o.id===t.dataset.tf),v=ev(t.value.trim()),e=$('#tf_'+t.dataset.tf);if(e)e.textContent=(r&&r.c.bD!=null&&!isNaN(v))?money(Math.max(0,Math.round(TAX_RATE*(v-r.c.bD)))):'—'}
   else if(t.dataset.calc){S.calc[t.dataset.calc]=t.value;const o=$('#calcOut');if(o)o.innerHTML=calcOut()}
