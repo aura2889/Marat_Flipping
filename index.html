@@ -166,7 +166,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=9"></script>
+<script src="data.enc.js?v=10"></script>
 <script>
 (function(){
 'use strict';
@@ -333,6 +333,7 @@ function vHome(){
     h+=`<div class="card" style="cursor:pointer" data-act="open" data-id="${o.id}"><div class="row"><div class="grow"><h3 style="margin:0;font-size:17px">${esc(o.name)}</h3><div class="sub">${o.area?o.area+' м² · ':''}${o.start?'ремонт с '+fdate(o.start)+days:'старт не указан'}</div></div><div class="num" style="font-family:var(--serif);font-size:22px;font-weight:600">${money(c.total)}</div></div>
      <div class="hint" style="margin-top:6px">${c.buy!=null?'куплена за '+mln(c.buy):'цена покупки не указана'}${c.n?' · '+c.n+' поз. расходов':' · расходы ещё не внесены'}</div>
      ${bud?`<div style="margin-top:10px"><div class="row hint"><span>Смета ${money(bud)}</span><span class="${c.total>bud?'bad':''}">${pct(c.total,bud)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,c.total/bud*100)}%;background:${c.total>bud?'var(--bad)':'var(--gold)'}"></i></div></div>`:''}
+     ${contractBlock(o)}
      ${c.total?`<div style="margin-top:8px">${bars(c.byG,c.total,k=>`data-act="itemgo" data-id="${o.id}" data-g="${esc(k)}" data-s=""`)}</div><div class="hint" style="margin-top:8px">Последние: ${last.slice(0,3).map(i=>esc(i.n)).join(' · ')}</div>`:''}</div>`;
   });
   h+=`<div class="h2">Все объекты</div><div class="card">${s.rows.map(r=>dealRow(r)).join('')}</div>`;
@@ -397,9 +398,15 @@ function pnl(o,c){
    ${L('Маржа (чистая)',c.margin==null?'—':(c.margin>=0?'+':'−')+money(Math.abs(c.margin)),c.margin==null?'':c.margin>=0?'good':'bad',1)}
   </table>`;
 }
+function contractBlock(o){
+  if(!o.contract)return '';
+  const paid=o.items.filter(i=>!i.x&&i.g==='Работы'&&(i.s==='Ремонтная бригада'||i.s==='Под ключ')).reduce((s,i)=>s+i.a,0),left=o.contract-paid;
+  return `<div style="margin:10px 0 2px;cursor:pointer" data-act="itemgo" data-id="${o.id}" data-g="Работы" data-s=""><div class="row hint"><span>Бригада по договору ${money(o.contract)}</span><span>выплачено ${money(paid)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,paid/o.contract*100)}%;background:#8c6a1e"></i></div><div class="row hint" style="margin-top:4px"><span>${pct(paid,o.contract)} оплачено</span><span class="${left<0?'bad':''}">${left<0?'сверх договора '+money(-left):'осталось '+money(left)}</span></div></div>`;
+}
 function objSum(o,c){
   let h=passport(o,c);
   if(c.partial&&o.status==='sold')h+=`<div class="note warn">Расходы на ремонт по этому объекту пока не привязаны — маржа ниже завышена (без ремонта).</div>`;
+  if(o.contract)h+=`<div class="card"><h3>Договор с бригадой</h3>${contractBlock(o)}</div>`;
   h+=`<div class="card"><h3>Результат сделки</h3>${pnl(o,c)}
   <div class="grid2" style="margin-top:12px">
    <div class="tile" style="cursor:default"><div class="l">ROI</div><div class="v">${c.roi!=null?(c.roi*100).toFixed(1).replace('.',',')+'%':'—'}</div></div>
@@ -473,7 +480,7 @@ function vExpenses(){
   <div class="tabs"><button class="tab ${E.scope==='all'?'on':''}" data-act="scope" data-id="all">Все объекты</button>${cur.map(o=>`<button class="tab cur ${E.scope===o.id?'on':''}" data-act="scope" data-id="${o.id}">${esc(o.name)}</button>`).join('')}</div>
   <select id="exp_scope" style="margin-bottom:10px"><option value="all">Все объекты</option>${all.map(o=>`<option value="${o.id}" ${E.scope===o.id?'selected':''}>${esc(o.name)}</option>`).join('')}</select>
   <div class="tabs">${[['g','Группы'],['s','Подгруппы'],['y','Материал / работа'],['o','Объекты']].map(t=>`<button class="tab ${E.by===t[0]?'on':''}" data-act="by" data-b="${t[0]}">${t[1]}</button>`).join('')}</div>
-  <div class="card"><div class="row" style="margin-bottom:8px"><b>Итого</b><b class="num">${money(total)}</b></div>`;
+  <div class="card"><div class="row" style="margin-bottom:8px"><b>Итого</b><b class="num">${money(total)}</b></div>${E.scope!=='all'&&objs[0]?contractBlock(objs[0]):''}`;
   if(!keys.length)h+=`<div class="mut">Расходов пока нет.</div>`;
   h+=keys.map(k=>{
     const g=E.by==='g'?k:(E.by==='s'?k.split(' › ')[0]:null);
@@ -524,7 +531,7 @@ function validDeals(){return rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate).
 function vAnalytics(){
   const A=S.ana;
   let h=`<div class="top"><div><div class="brand">Анализ</div><div class="sub">как растёт бизнес</div></div></div>
-  <div class="tabs">${[['dyn','Динамика'],['rank','Рейтинг'],['seg','Сегменты'],['calc','Калькулятор'],['cmp','Сравнение ремонтов']].map(t=>`<button class="tab ${A.sub===t[0]&&!A.year?'on':''}" data-act="ana" data-sub="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  <div class="tabs" style="flex-wrap:wrap;overflow:visible">${[['dyn','Динамика'],['rank','Рейтинг'],['seg','Сегменты'],['calc','Калькулятор'],['cmp','Сравнение ремонтов']].map(t=>`<button class="tab ${A.sub===t[0]&&!A.year?'on':''}" data-act="ana" data-sub="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   if(A.year)return h+anaYear(A.year);
   if(A.sub==='dyn')return h+anaDyn();
   if(A.sub==='rank')return h+anaRank();
@@ -534,7 +541,7 @@ function vAnalytics(){
 }
 function anaDyn(){
   const s=stats(),deals=validDeals(),years=Object.keys(s.yrs).filter(y=>y!=='—').sort();
-  let h=`<div class="hero" style="cursor:default"><div class="l">Общая прибыль</div><div class="v">${mln(s.earned)}</div><div class="s">${s.val.length} сделок · выручка ${mln1(s.revenue)}${s.first?' · с '+fdate(s.first):''}</div>
+  let h=`<div class="hero" style="cursor:default"><div class="l">Общая прибыль</div><div class="v">${mln1(s.earned)}</div><div class="s">${s.val.length} сделок · выручка ${mln1(s.revenue)}${s.first?' · с '+fdate(s.first):''}</div>
   <div class="mini"><div><b>${s.val.length?mln(s.earned/s.val.length):'—'}</b><span>на сделку</span></div><div><b>${mln(s.tax)}</b><span>налоги</span></div><div><b>${mln(s.realtor)}</b><span>риелторы</span></div></div></div>`;
   h+=`<div class="h2">Рост капитала</div><div class="card"><div class="hint" style="margin-bottom:6px">Накопленная прибыль по месяцам продаж</div>${cumChart(deals)}</div>`;
   const mx=Math.max(1,...years.map(y=>s.yrs[y].filter(r=>r.c.valid).reduce((a,r)=>a+r.c.margin,0)));
@@ -552,7 +559,7 @@ function anaYear(y){
   const v=rs.filter(r=>r.c.valid);
   const p=v.reduce((a,r)=>a+r.c.margin,0);
   const m={};v.forEach(r=>{const k=r.o.deal.sellDate.slice(5,7);m[k]=(m[k]||0)+r.c.margin});
-  let h=`<button class="back" data-act="year" data-y="">← Динамика</button><div class="hero" style="cursor:default"><div class="l">${y} год</div><div class="v">${mln(p)}</div><div class="s">${rs.length} продано · выручка ${mln1(v.reduce((a,r)=>a+r.c.sell,0))}</div>
+  let h=`<button class="back" data-act="year" data-y="">← Динамика</button><div class="hero" style="cursor:default"><div class="l">${y} год</div><div class="v">${mln1(p)}</div><div class="s">${rs.length} продано · выручка ${mln1(v.reduce((a,r)=>a+r.c.sell,0))}</div>
   <div class="mini"><div><b>${v.length?mln(p/v.length):'—'}</b><span>на сделку</span></div><div><b>${v.length?(v.reduce((a,r)=>a+r.c.roi,0)/v.length*100).toFixed(0)+'%':'—'}</b><span>ср. ROI</span></div><div><b>${v.reduce((a,r)=>a+(r.c.area||0),0)} м²</b><span>продано</span></div></div></div>`;
   h+=`<div class="h2">Сделки ${y}</div><div class="card">${rs.map(r=>dealRow(r)).join('')}</div>`;
   const ks=Object.keys(m).sort();
@@ -650,7 +657,7 @@ function render(keep){
   else if(S.tab==='exp')h=vExpenses();
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v9 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v10 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
