@@ -166,7 +166,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js"></script>
+<script src="data.enc.js?v=8"></script>
 <script>
 (function(){
 'use strict';
@@ -269,12 +269,12 @@ function stats(){
 }
 
 /* ---------- state ---------- */
-const S={tab:'home',obj:null,otab:'sum',of:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
+const S={tab:'home',obj:null,otab:'sum',of:'',os:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
 
 /* ---------- components ---------- */
-function bars(map,total){
+function bars(map,total,attrf){
   const keys=Object.keys(map).filter(k=>map[k]>0).sort((a,b)=>map[b]-map[a]);
-  return keys.map(k=>`<div style="margin:9px 0"><div class="row"><span><i class="dot" style="background:${GCOL[k]||'#888'}"></i>${esc(k)}</span><span class="num">${money(map[k])} <span class="mut">· ${pct(map[k],total)}</span></span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.max(2,map[k]/total*100)}%;background:${GCOL[k]||'#888'}"></i></div></div>`).join('');
+  return keys.map(k=>`<div style="margin:9px 0${attrf?';cursor:pointer':''}"${attrf?' '+attrf(k):''}><div class="row"><span><i class="dot" style="background:${GCOL[k]||'#888'}"></i>${esc(k)}</span><span class="num">${money(map[k])} <span class="mut">· ${pct(map[k],total)}</span></span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.max(2,map[k]/total*100)}%;background:${GCOL[k]||'#888'}"></i></div></div>`).join('');
 }
 function spark(vals){
   if(vals.length<2)return '';
@@ -333,7 +333,7 @@ function vHome(){
     h+=`<div class="card" style="cursor:pointer" data-act="open" data-id="${o.id}"><div class="row"><div class="grow"><h3 style="margin:0;font-size:17px">${esc(o.name)}</h3><div class="sub">${o.area?o.area+' м² · ':''}${o.start?'ремонт с '+fdate(o.start)+days:'старт не указан'}</div></div><div class="num" style="font-family:var(--serif);font-size:22px;font-weight:600">${money(c.total)}</div></div>
      <div class="hint" style="margin-top:6px">${c.buy!=null?'куплена за '+mln(c.buy):'цена покупки не указана'}${c.n?' · '+c.n+' поз. расходов':' · расходы ещё не внесены'}</div>
      ${bud?`<div style="margin-top:10px"><div class="row hint"><span>Смета ${money(bud)}</span><span class="${c.total>bud?'bad':''}">${pct(c.total,bud)}</span></div><div class="bar" style="margin-top:5px"><i style="width:${Math.min(100,c.total/bud*100)}%;background:${c.total>bud?'var(--bad)':'var(--gold)'}"></i></div></div>`:''}
-     ${c.total?`<div style="margin-top:8px">${bars(c.byG,c.total)}</div><div class="hint" style="margin-top:8px">Последние: ${last.slice(0,3).map(i=>esc(i.n)).join(' · ')}</div>`:''}</div>`;
+     ${c.total?`<div style="margin-top:8px">${bars(c.byG,c.total,k=>`data-act="itemgo" data-id="${o.id}" data-g="${esc(k)}" data-s=""`)}</div><div class="hint" style="margin-top:8px">Последние: ${last.slice(0,3).map(i=>esc(i.n)).join(' · ')}</div>`:''}</div>`;
   });
   h+=`<div class="h2">Все объекты</div><div class="card">${s.rows.map(r=>dealRow(r)).join('')}</div>`;
   const gm={};s.rows.forEach(r=>{for(const g in r.c.byG)gm[g]=(gm[g]||0)+r.c.byG[g]});
@@ -412,20 +412,20 @@ function objSum(o,c){
     h+=`<div class="card"><h3>Материалы и работа</h3>${Object.keys(c.byY).map(k=>`<div class="row" style="padding:4px 0"><span>${TYPES[k]||k}</span><span class="num">${money(c.byY[k])} <span class="mut">· ${pct(c.byY[k],c.total)}</span></span></div>`).join('')}</div>`;
     h+=`<div class="card"><h3>Детали по группам</h3>`+GROUPS.filter(g=>c.byG[g]).sort((a,b)=>c.byG[b]-c.byG[a]).map(g=>{
       const subs=Object.keys(c.byS).filter(k=>k.split('›')[0]===g).sort((a,b)=>c.byS[b]-c.byS[a]);
-      return `<details><summary class="row"><span><i class="dot" style="background:${GCOL[g]}"></i><b>${g}</b></span><span class="num">${money(c.byG[g])}</span></summary>${subs.map(k=>`<div class="row hint" style="padding:3px 0 3px 16px"><span>${esc(k.split('›')[1])}</span><span class="num">${money(c.byS[k])}</span></div>`).join('')}${g==='Черновые'&&c.byS['Доставка и мусор›Доставка: черновые']?`<div class="row hint" style="padding:3px 0 3px 16px;font-style:italic"><span>+ доставка черновых (в группе «Доставка и мусор»)</span><span class="num">${money(c.byS['Доставка и мусор›Доставка: черновые'])}</span></div>`:''}</details>`}).join('')+`</div>`;
+      return `<details><summary class="row"><span><i class="dot" style="background:${GCOL[g]}"></i><b>${g}</b></span><span class="num">${money(c.byG[g])}</span></summary>${subs.map(k=>`<div class="row hint" style="padding:3px 0 3px 16px;cursor:pointer" data-act="itemgo" data-id="${o.id}" data-g="${esc(g)}" data-s="${esc(k.split('›')[1])}"><span>${esc(k.split('›')[1])} ›</span><span class="num">${money(c.byS[k])}</span></div>`).join('')}${g==='Черновые'&&c.byS['Доставка и мусор›Доставка: черновые']?`<div class="row hint" style="padding:3px 0 3px 16px;font-style:italic"><span>+ доставка черновых (в группе «Доставка и мусор»)</span><span class="num">${money(c.byS['Доставка и мусор›Доставка: черновые'])}</span></div>`:''}</details>`}).join('')+`</div>`;
   }
   if(o.shared)h+=`<div class="note">Мебель Маэка и Самала 192 закупалась общим списком на ${money(o.shared.reduce((s,i)=>s+i.a,0))}. Детализация (${o.shared.length} поз.) есть в поиске материалов; в суммы объектов входят только строки «Мебель».</div>`;
   return h;
 }
 function objItems(o,c){
   const g=S.of,q=norm(S.oq);
-  let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1));
+  let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!S.os||i.s===S.os)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1));
   const sum=items.reduce((s,i)=>s+i.a,0),shown=items.slice(0,S.olim);
   let h=`<details class="card" style="border-top:1px solid var(--line)"><summary class="gold" style="padding:0"><b>+ Добавить расход</b></summary>${addForm(o)}</details>
   <input id="oq" placeholder="Поиск по расходам объекта" value="${esc(S.oq)}" style="margin-bottom:10px">
   <div class="tabs"><button class="tab ${!g?'on':''}" data-act="of" data-g="">Все</button>${GROUPS.filter(x=>c.byG[x]).map(x=>`<button class="tab ${g===x?'on':''}" data-act="of" data-g="${x}">${x}</button>`).join('')}</div>
-  <div class="row hint" style="margin-bottom:6px"><span>${items.length} поз.</span><span class="num">итого ${money(sum)}</span></div><div class="card">`;
-  h+=shown.map(i=>`<div class="li" style="cursor:default"><div class="row"><span class="grow">${esc(i.n)}${i.est?' <span class="est">ОЦЕНКА</span>':''}</span><span class="num">${money(i.a)}</span></div><div class="row hint"><span><i class="dot" style="background:${GCOL[i.g]}"></i>${i.g} › ${esc(i.s)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.d?' · '+fdate(i.d):''}</span>${i.add?`<button class="x" data-act="delitem" data-id="${o.id}" data-i="${i.add}">×</button>`:''}</div></div>`).join('')||'<div class="mut">Расходов пока нет</div>';
+  ${S.os?`<div style="margin-bottom:8px"><button class="tab on" data-act="clros">${esc(S.os)} ✕</button></div>`:''}<div class="row hint" style="margin-bottom:6px"><span>${items.length} поз.</span><span class="num">итого ${money(sum)}</span></div><div class="card">`;
+  h+=shown.map(i=>`<div class="li" style="cursor:pointer" ${i.y==='material'?`data-act="matgo" data-q="${esc(i.t)}"`:`data-act="expgo" data-id="${o.id}" data-k="${esc(i.g+' › '+i.s)}"`}><div class="row"><span class="grow">${esc(i.n)}${i.est?' <span class="est">ОЦЕНКА</span>':''}</span><span class="num">${money(i.a)}</span></div><div class="row hint"><span><i class="dot" style="background:${GCOL[i.g]}"></i>${i.g} › ${esc(i.s)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.d?' · '+fdate(i.d):''}</span>${i.add?`<button class="x" data-act="delitem" data-id="${o.id}" data-i="${i.add}">×</button>`:''}</div></div>`).join('')||'<div class="mut">Расходов пока нет</div>';
   h+=`</div>`;
   if(items.length>shown.length)h+=`<button class="btn ghost block" data-act="more">Показать ещё (${items.length-shown.length})</button>`;
   return h;
@@ -483,7 +483,7 @@ function vExpenses(){
 }
 function drillList(items,by){
   items=items.slice().sort((a,b)=>b.a-a.a);
-  return `<div style="background:var(--bg2);border-radius:12px;padding:6px 10px;margin:6px 0">${items.slice(0,80).map(i=>`<div style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)}${by==='g'?' › '+esc(i.s):''}</div></div>`).join('')}${items.length>80?`<div class="hint" style="padding:6px 0">…и ещё ${items.length-80} (смотрите в карточке объекта)</div>`:''}</div>`;
+  return `<div style="background:var(--bg2);border-radius:12px;padding:6px 10px;margin:6px 0">${items.slice(0,80).map(i=>`<div style="padding:5px 0;border-bottom:1px solid var(--line);cursor:pointer" data-act="itemgo" data-id="${i.oid}" data-g="${esc(i.g)}" data-s="${esc(i.s)}"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)}${by==='g'?' › '+esc(i.s):''} ›</div></div>`).join('')}${items.length>80?`<div class="hint" style="padding:6px 0">…и ещё ${items.length-80} (смотрите в карточке объекта)</div>`:''}</div>`;
 }
 
 /* ---------- MATERIALS ---------- */
@@ -514,7 +514,7 @@ function vMaterials(){
   h+=keys.slice(0,40).map(k=>{
     const arr=by[k].slice().sort((a,b)=>a.ord-b.ord),real=arr.filter(i=>!i.x),am=real.map(i=>i.a),sum=am.reduce((s,v)=>s+v,0),pr=arr.filter(i=>i.p).map(i=>i.p);
     return `<details class="card" style="padding:0"><summary style="padding:13px 15px"><div class="row"><b class="grow">${esc(k)}</b><span class="num">${money(sum)}</span></div><div class="hint">${arr.length} покупок${am.length?` · от ${money(Math.min(...am))} до ${money(Math.max(...am))}, средняя ${money(sum/am.length)}`:''}${pr.length?` · цена ед.: ${money(Math.min(...pr))}–${money(Math.max(...pr))}`:''}</div>${spark(am)}</summary>
-    <div style="padding:0 15px 10px">${arr.map(i=>`<div style="padding:7px 0;border-top:1px solid var(--line)"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)} › ${esc(i.g)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.x?' · детализация общей закупки':''}</div></div>`).join('')}</div></details>`}).join('');
+    <div style="padding:0 15px 10px">${arr.map(i=>`<div style="padding:7px 0;border-top:1px solid var(--line);cursor:pointer" data-act="itemgo" data-id="${i.oid}" data-g="${esc(i.g)}" data-s="${esc(i.s)}"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)} › ${esc(i.g)} ›${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.x?' · детализация общей закупки':''}</div></div>`).join('')}</div></details>`}).join('');
   if(keys.length>40)h+=`<div class="hint">Показаны первые 40 видов — уточните запрос.</div>`;
   return h;
 }
@@ -595,9 +595,9 @@ function anaCmp(){
   const sh=r=>r.o.name.replace(/^(Самал|Премиум Плаза|Зельмар|Голден Парк|Golden Park)\s*/,'$1 ').replace('Премиум Плаза','Премиум').replace('Голден Парк','Голден');
   const f=(v,r)=>{if(!v)return null;return m2?(r.c.area?v/r.c.area:null):v};
   const fm=v=>v==null?'—':Math.round(m2?v:v/1000).toLocaleString('ru-RU').replace(/[  ]/g,' ');
-  const cell=(vals,j)=>{const a=vals.filter(x=>x!=null&&x>0);const avg=a.length>1?a.reduce((s,x)=>s+x,0)/a.length:0;const v=vals[j];let st='';if(avg&&v){if(v>avg*1.2)st='background:#fbe6e1;';else if(v<avg*.8)st='background:#e3f2e8;'}return `<td class="r num" style="${st}white-space:nowrap">${fm(v)}</td>`};
+  const cell=(vals,j,att)=>{const a=vals.filter(x=>x!=null&&x>0);const avg=a.length>1?a.reduce((s,x)=>s+x,0)/a.length:0;const v=vals[j];let st='';if(avg&&v){if(v>avg*1.2)st='background:#fbe6e1;';else if(v<avg*.8)st='background:#e3f2e8;'}return `<td class="r num" style="${st}white-space:nowrap${v?';cursor:pointer':''}"${v&&att?' '+att:''}>${fm(v)}</td>`};
   const line=(label,vals,opt)=>{opt=opt||{};const a=vals.filter(x=>x!=null&&x>0),avg=a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
-    return `<tr${opt.attr||''}><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${label}</td>${vals.map((v,j)=>cell(vals,j)).join('')}<td class="r num" style="white-space:nowrap;font-weight:700">${fm(avg)}</td></tr>`};
+    return `<tr${opt.attr||''}><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${label}</td>${vals.map((v,j)=>cell(vals,j,opt.gs?`data-act="itemgo" data-id="${rows[j].o.id}" data-g="${esc(opt.gs[0])}" data-s="${esc(opt.gs[1]||'')}"`:'')).join('')}<td class="r num" style="white-space:nowrap;font-weight:700">${fm(avg)}</td></tr>`};
   let h=`<div class="card"><h3>Сравнение ремонтов</h3><div class="hint" style="margin-bottom:8px">Похожие квартиры рядом: сколько ушло на каждый этап. Зелёное — заметно дешевле среднего, красное — заметно дороже. Нажмите на группу, чтобы увидеть подгруппы и цены материалов.</div>
   <div class="tabs" style="margin-bottom:6px">${all.map(r=>`<button class="tab ${sel.indexOf(r.o.id)>-1?'on':''}" data-act="cmpsel" data-id="${r.o.id}">${esc(sh(r))}</button>`).join('')}</div>
   <div class="tabs" style="margin-bottom:8px"><button class="tab ${!m2?'on':''}" data-act="cmpm" data-m="t">Всего, тыс ₸</button><button class="tab ${m2?'on':''}" data-act="cmpm" data-m="m">На м², ₸</button></div>`;
@@ -606,14 +606,14 @@ function anaCmp(){
   let body=`<tr><td class="hint">Площадь, м²</td>${rows.map(r=>`<td class="r hint">${r.c.area||'—'}</td>`).join('')}<td></td></tr>`;
   if(!g){
     const gs=GROUPS.filter(x=>rows.some(r=>r.c.byG[x]));
-    body+=gs.map(x=>line(`<a data-act="cmpg" data-g="${x}" style="cursor:pointer"><i class="dot" style="background:${GCOL[x]}"></i><b>${x}</b> ›</a>`,rows.map(r=>f(r.c.byG[x],r)))).join('');
+    body+=gs.map(x=>line(`<a data-act="cmpg" data-g="${x}" style="cursor:pointer"><i class="dot" style="background:${GCOL[x]}"></i><b>${x}</b> ›</a>`,rows.map(r=>f(r.c.byG[x],r)),{gs:[x,'']})).join('');
     body+=line('<b>Ремонт без мебели и техники</b>',rows.map(r=>f(r.c.repair,r)),{attr:' class="total"'});
     body+=line('<b>Всего расходов</b>',rows.map(r=>f(r.c.total,r)));
     h+=`<div style="overflow-x:auto;margin:0 -4px"><table>${head}${body}</table></div></div>`;
     return h;
   }
   const subs=[...new Set(rows.flatMap(r=>Object.keys(r.c.byS).filter(k=>k.split('›')[0]===g)))].sort((a,b)=>rows.reduce((s,r)=>s+(r.c.byS[b]||0),0)-rows.reduce((s,r)=>s+(r.c.byS[a]||0),0));
-  body+=subs.map(k=>line(esc(k.split('›')[1]),rows.map(r=>f(r.c.byS[k],r)))).join('');
+  body+=subs.map(k=>line(esc(k.split('›')[1]),rows.map(r=>f(r.c.byS[k],r)),{gs:[g,k.split('›')[1]]})).join('');
   body+=line(`<b>Итого ${g}</b>`,rows.map(r=>f(r.c.byG[g],r)),{attr:' class="total"'});
   h=h.replace('<h3>Сравнение ремонтов</h3>',`<h3><a data-act="cmpg" data-g="" style="cursor:pointer;color:var(--gold2,#b8892a)">‹ Все группы</a> · ${g}</h3>`);
   h+=`<div style="overflow-x:auto;margin:0 -4px"><table>${head}${body}</table></div></div>`;
@@ -625,7 +625,7 @@ function anaCmp(){
     h+=`<div class="card"><h3>Цены материалов за единицу, ₸</h3><div class="hint" style="margin-bottom:8px">Средняя цена за единицу по накладным — видно, где материал покупался дороже.</div><div style="overflow-x:auto;margin:0 -4px"><table>${head.replace(/<th class="r">Среднее<\/th>/,'<th class="r">Разброс</th>')}`+keys.map(k=>{
       const vals=rows.map(r=>pm[k][r.o.id]?pm[k][r.o.id].a/pm[k][r.o.id].q:null),a=vals.filter(x=>x!=null);
       const mn=Math.min(...a),mx=Math.max(...a);
-      return `<tr><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${esc(k)}</td>${vals.map(v=>`<td class="r num" style="white-space:nowrap;${a.length>1&&v!=null&&v===mx&&mx>mn*1.05?'background:#fbe6e1;':a.length>1&&v!=null&&v===mn&&mx>mn*1.05?'background:#e3f2e8;':''}">${v==null?'—':Math.round(v).toLocaleString('ru-RU').replace(/[  ]/g,' ')}</td>`).join('')}<td class="r num hint">${a.length>1&&mn>0?(mx>mn*1.005?'+'+Math.round((mx/mn-1)*100)+'%':'='):''}</td></tr>`}).join('')+`</table></div></div>`;
+      return `<tr data-act="matgo" data-q="${esc(k.split(' · ')[0])}" style="cursor:pointer"><td style="position:sticky;left:0;background:var(--card,#fffdf6);min-width:118px">${esc(k)} ›</td>${vals.map(v=>`<td class="r num" style="white-space:nowrap;${a.length>1&&v!=null&&v===mx&&mx>mn*1.05?'background:#fbe6e1;':a.length>1&&v!=null&&v===mn&&mx>mn*1.05?'background:#e3f2e8;':''}">${v==null?'—':Math.round(v).toLocaleString('ru-RU').replace(/[  ]/g,' ')}</td>`).join('')}<td class="r num hint">${a.length>1&&mn>0?(mx>mn*1.005?'+'+Math.round((mx/mn-1)*100)+'%':'='):''}</td></tr>`}).join('')+`</table></div></div>`;
   }
   return h;
 }
@@ -647,7 +647,7 @@ function render(keep){
   else if(S.tab==='exp')h=vExpenses();
   else if(S.tab==='mat')h=vMaterials();
   else if(S.tab==='ana')h=vAnalytics();
-  else h=vHome();
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v8 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -659,10 +659,14 @@ document.addEventListener('click',e=>{
   const a=el.dataset.act;
   if(a==='tab'){S.tab=el.dataset.t;if(S.tab==='objects')S.obj=null;if(S.tab==='ana')S.ana.year=null;render()}
   else if(a==='go'){S.tab=el.dataset.t;S.obj=null;if(el.dataset.sub){S.ana.sub=el.dataset.sub;S.ana.year=null}render()}
-  else if(a==='open'){S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;render()}
-  else if(a==='otab'){S.otab=el.dataset.t;S.of='';S.oq='';S.olim=60;render()}
+  else if(a==='itemgo'){S.tab='objects';S.obj=el.dataset.id;S.otab='items';S.of=el.dataset.g||'';S.os=el.dataset.s||'';S.oq='';S.olim=60;render()}
+  else if(a==='clros'){S.os='';render(true)}
+  else if(a==='matgo'){S.tab='mat';S.obj=null;S.mat.q=el.dataset.q;S.mat.g='';render()}
+  else if(a==='expgo'){S.tab='exp';S.obj=null;S.exp.scope=el.dataset.id;S.exp.by='s';S.exp.drill=el.dataset.k;render()}
+  else if(a==='open'){S.os='';S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;render()}
+  else if(a==='otab'){S.otab=el.dataset.t;S.of='';S.os='';S.oq='';S.olim=60;render()}
   else if(a==='ofl'){S.ofl=el.dataset.f;render(true)}
-  else if(a==='of'){S.of=el.dataset.g;S.olim=60;render(true)}
+  else if(a==='of'){S.of=el.dataset.g;S.os='';S.olim=60;render(true)}
   else if(a==='more'){S.olim+=100;render(true)}
   else if(a==='scope'){S.exp.scope=el.dataset.id;S.exp.drill=null;render(true)}
   else if(a==='by'){S.exp.by=el.dataset.b;S.exp.drill=null;render(true)}
