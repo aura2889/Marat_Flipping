@@ -172,7 +172,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=17"></script>
+<script src="data.enc.js?v=18"></script>
 <script>
 (function(){
 'use strict';
@@ -702,9 +702,13 @@ function goalHist(){
 }
 function goalP(){
   const g=LS.goal||{};
-  const p=Object.assign({roi:.15,dep:.15,depTax:.10,sal:7e6,K:27e6,Kmax:60e6,scale:false,infl:false,inflRate:.08,cap0:null,sel:'now',custom:{n:2,T:3,gap:1,K:null}},g);
-  {const vr=rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate),tt=vr.reduce((s,r)=>s+(r.c.tax||0),0),mm=vr.reduce((s,r)=>s+r.c.margin,0),ny=new Date().getFullYear(),acc=vr.filter(r=>r.o.deal.sellDate.slice(0,4)===String(ny)).reduce((s,r)=>s+(r.c.tax||0),0);
-   p.tsh=(tt+mm)>0?tt/(tt+mm):.15;p.pend0=Math.max(0,acc-taxPaid(String(ny)));p.pendYear=ny}
+  const p=Object.assign({roiM:.15,auto:true,dep:.15,depTax:.10,sal:7e6,K:27e6,Kmax:60e6,scale:false,infl:false,inflRate:.08,cap0:null,sel:'now',custom:{n:2,T:3,gap:1,K:null}},g);
+  {const vr=rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate),tt=vr.reduce((s,r)=>s+(r.c.tax||0),0),mm=vr.reduce((s,r)=>s+r.c.margin,0),nw=new Date(),ny=nw.getFullYear(),nidx=ny*12+nw.getMonth(),
+   idx=r=>{const d=r.o.deal.sellDate;return +d.slice(0,4)*12+(+d.slice(5,7)-1)},w=vr.filter(r=>idx(r)>nidx-12),use=w.length>=3?w:vr,
+   wm=use.reduce((s,r)=>s+r.c.margin,0),wc=use.reduce((s,r)=>s+r.c.costs,0),wt=use.reduce((s,r)=>s+(r.c.tax||0),0),acc=vr.filter(r=>r.o.deal.sellDate.slice(0,4)===String(ny)).reduce((s,r)=>s+(r.c.tax||0),0);
+   p.fact={n:use.length,m:wm,c:wc,t:wt,roi:wc?wm/wc:.15,tsh:(wt+wm)>0?wt/(wt+wm):.15,all:{tsh:(tt+mm)>0?tt/(tt+mm):.15}};
+   p.roi=p.auto?p.fact.roi:p.roiM;p.tsh=p.auto?p.fact.tsh:(p.tshM!=null?p.tshM:p.fact.tsh);
+   p.pend0=Math.max(0,acc-taxPaid(String(ny)));p.pendYear=ny}
   if(p.cap0==null){
     const by=goalHist(),m=Object.keys(by).reduce((s,y)=>s+by[y].m,0),now=new Date(),yrs=Math.max(0,(now-new Date(2025,0,1))/(365.25*86400000));
     p.cap0=Math.round(26e6+m+p.sal*yrs);p.cap0Auto=true;
@@ -748,7 +752,7 @@ function goalDate(r){
 }
 function agew(n){const a=n%100,b=n%10;return n+' '+(a>=11&&a<=14?'лет':b===1?'год':b>=2&&b<=4?'года':'лет')}
 function goalScens(p){
-  const list=GP.map(s=>Object.assign({},s)).concat([Object.assign({id:'custom',name:'Свой сценарий',d:'настройте ниже'},p.custom)]);
+  const list=GP.map(s=>s.id==='now'&&p.auto&&p.fact.n>=3?Object.assign({},s,{gap:Math.max(0,s.n*12/p.fact.n-s.T),d:'моя скорость за 12 мес: '+p.fact.n+' продаж'}):Object.assign({},s)).concat([Object.assign({id:'custom',name:'Свой сценарий',d:'настройте ниже'},p.custom)]);
   return list.map((s,i)=>({s,col:GCOLS[i%GCOLS.length],r:goalSim(p,s)}));
 }
 function goalChart(sc,p,selId){
@@ -805,9 +809,10 @@ function vGoal(){
   <div class="grid2"><div><label>Ремонтов параллельно</label><input data-gp="n" inputmode="decimal" value="${cur.n}"></div><div><label>Цикл: покупка → продажа, мес</label><input data-gp="T" inputmode="decimal" value="${cur.T}"></div></div>
   <div class="grid2"><div><label>Пауза до следующей покупки, мес</label><input data-gp="gap" inputmode="decimal" value="${cur.gap}"></div><div><label>Размер объекта, млн ₸</label><input data-gp="K" inputmode="decimal" value="${cur.K/1e6}"></div></div></div>
   <div class="card"><h3>Общие условия</h3>
-  <div class="grid2"><div><label>Капитал сейчас, млн ₸ ${p.cap0Auto?'<span class="hint">(расчёт)</span>':''}</label><input data-gg="cap0" inputmode="decimal" value="${Math.round(p.cap0/1e5)/10}"></div><div><label>Прибыль с объекта, % за сделку</label><input data-gg="roi" inputmode="decimal" value="${Math.round(p.roi*1000)/10}"></div></div>
+  <div class="grid2"><div><label>Капитал сейчас, млн ₸ ${p.cap0Auto?'<span class="hint">(расчёт)</span>':''}</label><input data-gg="cap0" inputmode="decimal" value="${Math.round(p.cap0/1e5)/10}"></div><div><label>Прибыль с объекта, % от затрат</label><input data-gg="roi" inputmode="decimal" value="${Math.round(p.roi*1000)/10}"></div></div>
   <div class="grid2"><div><label>Депозит, % годовых</label><input data-gg="dep" inputmode="decimal" value="${Math.round(p.dep*1000)/10}"></div><div><label>Налог на проценты, %</label><input data-gg="depTax" inputmode="decimal" value="${Math.round(p.depTax*1000)/10}"></div></div>
-  <div class="grid2"><div><label>Зарплата чистыми в год, млн</label><input data-gg="sal" inputmode="decimal" value="${p.sal/1e6}"></div><div></div></div>
+  <div class="grid2"><div><label>Зарплата чистыми в год, млн</label><input data-gg="sal" inputmode="decimal" value="${p.sal/1e6}"></div><div><label>Налог в прибыли до налога, %</label><input data-gg="tshM" inputmode="decimal" value="${Math.round(p.tsh*1000)/10}"></div></div>
+  <label style="display:flex;gap:8px;align-items:flex-start;margin-top:10px"><input type="checkbox" data-gt="auto" style="width:auto;margin-top:3px" ${p.auto?'checked':''}> <span>Считать по моим фактам за последние 12 месяцев (обновляется само при новых продажах)<br><span class="hint">${p.fact.n} продаж · прибыль ${mln(p.fact.m)} · ROI ${(p.fact.roi*100).toFixed(1).replace('.',',')}% · налог ${mln(p.fact.t)} (${(p.fact.tsh*100).toFixed(0)}% до налога) · за всё время налог ${(p.fact.all.tsh*100).toFixed(0)}%</span></span></label>
   <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-gt="scale" style="width:auto" ${p.scale?'checked':''}> Крупнее объекты по мере роста капитала (до 60 млн)</label>
   <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" data-gt="infl" style="width:auto" ${p.infl?'checked':''}> Учитывать инфляцию 8% в год (500 млн в сегодняшних деньгах)</label>
   <div class="hint" style="margin-top:10px">Налог с продаж ${p.pendYear} года (${mln(p.pend0)}) лежит на депозите до сентября ${p.pendYear+1}, дальше налог с каждой продажи — до сентября следующего года. Свободные деньги лежат на депозите, в квартиры деньги уходят при покупке и возвращаются с прибылью при продаже. Налоги и риелтор уже вычтены из прибыли с объекта. Для справки: средняя прибыль по твоим сделкам ${(totM/totC*100).toFixed(1).replace('.',',')}% за сделку, за 2026 год ${by['2026']?(by['2026'].m/by['2026'].cost*100).toFixed(1).replace('.',','):'—'}%.</div></div>
@@ -834,7 +839,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v17 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v18 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -914,8 +919,8 @@ document.addEventListener('input',e=>{
   if(t.id==='mq'){S.mat.q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.id==='oq'){S.oq=t.value;S.olim=60;clearTimeout(window._ot);window._ot=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#oq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.dataset.gp){const p=goalP(),cur=goalScen(p,p.sel==='custom'?p.custom:(GP.find(x=>x.id===p.sel)||GP[0])),v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)&&v>0){const base={n:cur.n,T:cur.T,gap:cur.gap,K:cur.K};base[t.dataset.gp]=t.dataset.gp==='K'?v*1e6:(t.dataset.gp==='n'?Math.max(1,Math.round(v)):v);goalSet('custom',base);goalSet('sel','custom');const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml();const ch=$('#gChips');if(ch)ch.innerHTML=goalChipsHtml()}}
-  else if(t.dataset.gg){const k=t.dataset.gg,v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)){goalSet(k,(k==='cap0'||k==='sal')?v*1e6:v/100);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}}
-  else if(t.dataset.gt){goalSet(t.dataset.gt,t.checked);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}
+  else if(t.dataset.gg){const k=t.dataset.gg,v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)){if(k==='roi'||k==='tshM'){goalSet(k==='roi'?'roiM':'tshM',v/100);goalSet('auto',false);const cb=document.querySelector('[data-gt=auto]');if(cb)cb.checked=false}else goalSet(k,(k==='cap0'||k==='sal')?v*1e6:v/100);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}}
+  else if(t.dataset.gt){goalSet(t.dataset.gt,t.checked);if(t.dataset.gt==='auto'&&t.checked){const pp=goalP(),a=document.querySelector('[data-gg=roi]'),b=document.querySelector('[data-gg=tshM]');if(a)a.value=Math.round(pp.roi*1000)/10;if(b)b.value=Math.round(pp.tsh*1000)/10}const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}
   else if(t.dataset.taxpaid!==undefined){const y=t.dataset.taxpaid;LS.taxPaid=LS.taxPaid||{};const v=t.value.trim();LS.taxPaid[y]=v===''?null:(isNaN(ev(v))?0:ev(v));save();const rs=rowsFlip().filter(r=>r.o.status==='sold'&&(r.o.deal.sellDate||'').slice(0,4)===y);const a=rs.reduce((s,r)=>s+(r.c.tax||0),0),l=a-taxPaid(y),e=$('#taxLeft');if(e){e.textContent=money(l);e.style.color=l>0?'var(--bad)':'var(--good)'}}
   else if(t.dataset.tf){S.tax.fc[t.dataset.tf]=t.value;const r=rowsFlip().find(x=>x.o.id===t.dataset.tf),v=ev(t.value.trim()),e=$('#tf_'+t.dataset.tf);if(e)e.textContent=(r&&r.c.bD!=null&&!isNaN(v))?money(Math.max(0,Math.round(TAX_RATE*(v-r.c.bD)))):'—'}
   else if(t.dataset.calc){S.calc[t.dataset.calc]=t.value;const o=$('#calcOut');if(o)o.innerHTML=calcOut()}
