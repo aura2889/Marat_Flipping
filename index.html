@@ -172,7 +172,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=16"></script>
+<script src="data.enc.js?v=17"></script>
 <script>
 (function(){
 'use strict';
@@ -702,7 +702,9 @@ function goalHist(){
 }
 function goalP(){
   const g=LS.goal||{};
-  const p=Object.assign({roi:.15,dep:.15,sal:7e6,K:27e6,Kmax:60e6,scale:false,infl:false,inflRate:.08,cap0:null,sel:'now',custom:{n:2,T:3,gap:1,K:null}},g);
+  const p=Object.assign({roi:.15,dep:.15,depTax:.10,sal:7e6,K:27e6,Kmax:60e6,scale:false,infl:false,inflRate:.08,cap0:null,sel:'now',custom:{n:2,T:3,gap:1,K:null}},g);
+  {const vr=rowsFlip().filter(r=>r.c.valid&&r.o.deal.sellDate),tt=vr.reduce((s,r)=>s+(r.c.tax||0),0),mm=vr.reduce((s,r)=>s+r.c.margin,0),ny=new Date().getFullYear(),acc=vr.filter(r=>r.o.deal.sellDate.slice(0,4)===String(ny)).reduce((s,r)=>s+(r.c.tax||0),0);
+   p.tsh=(tt+mm)>0?tt/(tt+mm):.15;p.pend0=Math.max(0,acc-taxPaid(String(ny)));p.pendYear=ny}
   if(p.cap0==null){
     const by=goalHist(),m=Object.keys(by).reduce((s,y)=>s+by[y].m,0),now=new Date(),yrs=Math.max(0,(now-new Date(2025,0,1))/(365.25*86400000));
     p.cap0=Math.round(26e6+m+p.sal*yrs);p.cap0Auto=true;
@@ -715,19 +717,22 @@ function goalSim(p,s){
   s=goalScen(p,s);
   const dt=.25,maxT=40*12,sl=[];for(let i=0;i<s.n;i++)sl.push({rem:0,inv:0,wait:0});
   const now=new Date(),m0=now.getMonth()+now.getDate()/30.4;
-  let cash=p.cap0,t=0,reach=null;const yrs={},series=[p.cap0];
+  const y0=now.getFullYear();let cash=p.cap0+(p.pend0||0),t=0,reach=null;const yrs={},series=[p.cap0];
+  let pend=(p.pend0>0)?[{amt:p.pend0,due:(y0+1)*12+8}]:[];
   const tgt=tt=>GOAL_T*(p.infl?Math.pow(1+p.inflRate,tt/12):1);
   const tseries=[GOAL_T];
   while(t<maxT){
     const yi=Math.floor((m0+t)/12),Y=yrs[yi]||(yrs[yi]={deals:0,dp:0,dep:0,sal:0});
-    const inte=cash*p.dep/12*dt;cash+=inte;Y.dep+=inte;
+    const A=y0*12+m0+t;
+    for(let q=pend.length-1;q>=0;q--){if(A>=pend[q].due){cash-=pend[q].amt;pend.splice(q,1)}}
+    const inte=cash*p.dep*(1-p.depTax)/12*dt;cash+=inte;Y.dep+=inte;
     const sa=p.sal/12*dt;cash+=sa;Y.sal+=sa;
     for(const x of sl){
-      if(x.inv>0){x.rem-=dt;if(x.rem<=1e-9){const pr=x.inv*p.roi;cash+=x.inv+pr;Y.dp+=pr;Y.deals++;x.inv=0;x.wait=s.gap}}
-      else{x.wait-=dt;if(x.wait<=1e-9){const cap=cash+sl.reduce((a,z)=>a+z.inv,0),Kc=p.scale?Math.min(p.Kmax,Math.max(s.K,.6*cap/s.n)):s.K,inv=Math.min(Kc,cash);if(inv>=.5*Kc){cash-=inv;x.inv=inv;x.rem=s.T}}}
+      if(x.inv>0){x.rem-=dt;if(x.rem<=1e-9){const pr=x.inv*p.roi,tx=pr/(1-p.tsh)-pr;cash+=x.inv+pr+tx;pend.push({amt:tx,due:(Math.floor(A/12)+1)*12+8});Y.dp+=pr;Y.deals++;x.inv=0;x.wait=s.gap}}
+      else{x.wait-=dt;if(x.wait<=1e-9){const cap=cash+sl.reduce((a,z)=>a+z.inv,0)-pend.reduce((a,z)=>a+z.amt,0),Kc=p.scale?Math.min(p.Kmax,Math.max(s.K,.6*cap/s.n)):s.K,inv=Math.min(Kc,cash);if(inv>=.5*Kc){cash-=inv;x.inv=inv;x.rem=s.T}}}
     }
     t+=dt;
-    const cap=cash+sl.reduce((a,z)=>a+z.inv,0);
+    const cap=cash+sl.reduce((a,z)=>a+z.inv,0)-pend.reduce((a,z)=>a+z.amt,0);
     if(Math.abs(t-Math.round(t))<1e-9){series.push(cap);tseries.push(tgt(t))}
     if(reach==null&&cap>=tgt(t)){reach=t;break}
   }
@@ -801,10 +806,11 @@ function vGoal(){
   <div class="grid2"><div><label>Пауза до следующей покупки, мес</label><input data-gp="gap" inputmode="decimal" value="${cur.gap}"></div><div><label>Размер объекта, млн ₸</label><input data-gp="K" inputmode="decimal" value="${cur.K/1e6}"></div></div></div>
   <div class="card"><h3>Общие условия</h3>
   <div class="grid2"><div><label>Капитал сейчас, млн ₸ ${p.cap0Auto?'<span class="hint">(расчёт)</span>':''}</label><input data-gg="cap0" inputmode="decimal" value="${Math.round(p.cap0/1e5)/10}"></div><div><label>Прибыль с объекта, % за сделку</label><input data-gg="roi" inputmode="decimal" value="${Math.round(p.roi*1000)/10}"></div></div>
-  <div class="grid2"><div><label>Депозит, % годовых</label><input data-gg="dep" inputmode="decimal" value="${Math.round(p.dep*1000)/10}"></div><div><label>Зарплата чистыми в год, млн</label><input data-gg="sal" inputmode="decimal" value="${p.sal/1e6}"></div></div>
+  <div class="grid2"><div><label>Депозит, % годовых</label><input data-gg="dep" inputmode="decimal" value="${Math.round(p.dep*1000)/10}"></div><div><label>Налог на проценты, %</label><input data-gg="depTax" inputmode="decimal" value="${Math.round(p.depTax*1000)/10}"></div></div>
+  <div class="grid2"><div><label>Зарплата чистыми в год, млн</label><input data-gg="sal" inputmode="decimal" value="${p.sal/1e6}"></div><div></div></div>
   <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" data-gt="scale" style="width:auto" ${p.scale?'checked':''}> Крупнее объекты по мере роста капитала (до 60 млн)</label>
   <label style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" data-gt="infl" style="width:auto" ${p.infl?'checked':''}> Учитывать инфляцию 8% в год (500 млн в сегодняшних деньгах)</label>
-  <div class="hint" style="margin-top:10px">Свободные деньги лежат на депозите, в квартиры деньги уходят при покупке и возвращаются с прибылью при продаже. Налоги и риелтор уже вычтены из прибыли с объекта. Для справки: средняя прибыль по твоим сделкам ${(totM/totC*100).toFixed(1).replace('.',',')}% за сделку, за 2026 год ${by['2026']?(by['2026'].m/by['2026'].cost*100).toFixed(1).replace('.',','):'—'}%.</div></div>
+  <div class="hint" style="margin-top:10px">Налог с продаж ${p.pendYear} года (${mln(p.pend0)}) лежит на депозите до сентября ${p.pendYear+1}, дальше налог с каждой продажи — до сентября следующего года. Свободные деньги лежат на депозите, в квартиры деньги уходят при покупке и возвращаются с прибылью при продаже. Налоги и риелтор уже вычтены из прибыли с объекта. Для справки: средняя прибыль по твоим сделкам ${(totM/totC*100).toFixed(1).replace('.',',')}% за сделку, за 2026 год ${by['2026']?(by['2026'].m/by['2026'].cost*100).toFixed(1).replace('.',','):'—'}%.</div></div>
   <div class="card"><h3>Мой путь с 2024 года</h3><div class="hint" style="margin-bottom:6px">Старт 26 млн ₸ в 2024. Капитал = старт + прибыль от продаж + зарплата (проценты по депозиту и личные траты не учтены).</div>
   <table><tr><th>Год</th><th class="r">Продаж</th><th class="r">Прибыль</th><th class="r">Капитал</th></tr><tr><td><b>Старт</b></td><td></td><td></td><td class="r num"><b>26,00 млн</b></td></tr>${hrows.map(x=>`<tr data-act="year" data-y="${x.y}" style="cursor:pointer"><td><b>${x.y}</b> ›<div class="hint">+ зарплата ${mln(x.sal)}</div></td><td class="r num">${x.n}</td><td class="r num">${mln(x.m)}<div class="hint">ROI ${(x.roi*100).toFixed(1).replace('.',',')}%</div></td><td class="r num"><b>${mln(x.cap)}</b></td></tr>`).join('')}</table></div>
   <div class="card"><h3>Моя скорость</h3><div class="grid2">
@@ -828,7 +834,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v16 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v17 · данные от 15.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
