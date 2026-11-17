@@ -172,7 +172,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=19"></script>
+<script src="data.enc.js?v=20"></script>
 <script>
 (function(){
 'use strict';
@@ -434,7 +434,7 @@ function objSum(o,c){
 }
 function objItems(o,c){
   const g=S.of,q=norm(S.oq);
-  let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!S.os||i.s===S.os)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1));
+  let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!S.os||i.s===S.os)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1)).sort((a,b)=>(b.d||'').localeCompare(a.d||'')||b.ix-a.ix);
   const sum=items.reduce((s,i)=>s+i.a,0),shown=items.slice(0,S.olim);
   let h=`<details class="card" style="border-top:1px solid var(--line)"><summary class="gold" style="padding:0"><b>+ Добавить расход</b></summary>${addForm(o)}</details>
   <input id="oq" placeholder="Поиск по расходам объекта" value="${esc(S.oq)}" style="margin-bottom:10px">
@@ -839,7 +839,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v19 · данные от 17.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v20 · данные от 17.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
