@@ -112,6 +112,13 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
 .back{background:none;border:0;color:var(--em);padding:4px 0;cursor:pointer;font-size:14px;font-weight:700;margin-bottom:6px}
 .spark{display:block;width:100%;height:34px}
+.cp{background:none;border:0;color:var(--mut);opacity:.6;font-size:11px;padding:2px 4px;cursor:pointer;font-family:inherit;font-weight:500;letter-spacing:0;text-transform:none;white-space:nowrap}
+.cp:active{opacity:1}.cp.ok{color:var(--good);opacity:1}
+.cph{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cprow{text-align:right;margin:-8px -4px 2px;line-height:1}
+.cp.abs{position:absolute;top:6px;right:8px;color:inherit;opacity:.45}
+.cp.rep{border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-size:12px;opacity:.85;margin-left:6px}
+.hero,.goalhero{position:relative}
 .x{background:none;border:0;color:var(--bad);cursor:pointer;font-size:17px;padding:0 4px}
 .pass{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}
 .pass dt{color:var(--mut)}.pass dd{margin:0;font-weight:600;text-align:right}
@@ -172,7 +179,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=24"></script>
+<script src="data.enc.js?v=25"></script>
 <script>
 (function(){
 'use strict';
@@ -374,7 +381,7 @@ function vObject(){
   const o=allObjects().find(x=>x.id===S.obj);if(!o){S.obj=null;return vObjects()}
   const c=calc(o);
   let h=`<button class="back" data-act="tab" data-t="objects">← Объекты</button>
-  <div class="row"><div class="grow"><div class="brand" style="font-size:26px">${esc(o.name)}</div><div class="sub">${esc(o.adr||'')}</div></div>${chip(o.status)}</div>
+  <div class="row"><div class="grow"><div class="brand" style="font-size:26px">${esc(o.name)}</div><div class="sub">${esc(o.adr||'')}</div></div>${chip(o.status)}<button class="cp rep" data-rep="${esc(o.id)}">Отчёт</button></div>
   <div class="tabs" style="margin-top:12px">${[['sum','Итоги'],['items','Расходы'],['deal','Сделка']].map(t=>`<button class="tab ${S.otab===t[0]?'on':''}" data-act="otab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>`;
   if(S.otab==='sum')h+=objSum(o,c);else if(S.otab==='items')h+=objItems(o,c);else h+=objDeal(o,c);
   return h;
@@ -839,11 +846,91 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v24 · данные от 20.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v25 · данные от 20.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
 }
+
+
+/* ---------- копирование ---------- */
+function objReport(o,c){
+  const d=o.deal||{},L=[];
+  L.push('📋 '+o.name+' — '+(ST[o.status]||o.status));
+  const par=[o.adr,o.typ,o.area?o.area+' м²':'',o.floor&&!/этаж/i.test(o.adr||'')?'этаж '+o.floor:'',o.ent&&!/подъезд/i.test(o.adr||'')?'подъезд '+o.ent:''].filter(Boolean).join(', ');
+  if(par)L.push(par);
+  if(c.buy!=null)L.push('Покупка: '+money(c.buy)+(d.buyDkp!=null&&d.buyDkp!==''?' (в ДКП '+money(d.buyDkp)+')':''));
+  if(c.total){
+    const top=Object.keys(c.byG).sort((a,b)=>c.byG[b]-c.byG[a]).slice(0,4).map(g=>g+' '+mln(c.byG[g])).join(', ');
+    L.push('Ремонт: '+money(c.total)+' ('+c.n+' поз.)'+(c.area?', '+money(c.total/c.area)+'/м²':''));
+    L.push('Основное: '+top);
+  }
+  if(o.contract){
+    const paid=o.items.filter(i=>!i.x&&i.g==='Работы'&&(i.s==='Ремонтная бригада'||i.s==='Под ключ')).reduce((a,i)=>a+i.a,0);
+    L.push('Бригада по договору: '+money(o.contract)+', оплачено '+money(paid)+', остаток '+money(o.contract-paid));
+  }
+  if(o.start){
+    const dt=toDate(o.start),days=dt?Math.max(0,Math.floor((Date.now()-dt)/86400000)):null;
+    L.push('Ремонт начат: '+fdate(o.start)+(o.status==='active'&&days!=null?' (идёт '+days+' дн.)':''));
+  }
+  if(o.status==='sold'||c.sell!=null){
+    if(c.realtor)L.push('Риелтор: '+money(c.realtor));
+    if(c.tax)L.push('Налог: '+money(c.tax));
+    L.push('Всего затрат: '+money(c.costs));
+    if(c.sell!=null)L.push('Продажа: '+money(c.sell)+(d.sellDate?' ('+fdate(d.sellDate)+')':''));
+    if(c.margin!=null&&!c.partial)L.push('Маржа: '+(c.margin>=0?'+':'−')+money(Math.abs(c.margin))+(c.roi!=null?', ROI '+(c.roi*100).toFixed(1).replace('.',',')+'%':'')+(c.months?', срок '+c.months.toFixed(1).replace('.',',')+' мес.':''));
+  }else L.push('Затрачено всего: '+money(c.costs));
+  return L.join('\n');
+}
+function cpText(root){
+  const SK=/^(BUTTON|INPUT|SELECT|TEXTAREA|SCRIPT|STYLE|SVG|CANVAS)$/i;
+  const ws=t=>t.replace(/\s+/g,' ').trim();
+  function walk(n){
+    if(n.nodeType===3)return n.nodeValue.replace(/\s+/g,' ');
+    if(n.nodeType!==1)return '';
+    const tg=n.tagName,cl=n.classList;
+    if(cl.contains('cp')||cl.contains('cprow')||cl.contains('tabs')||cl.contains('x')||cl.contains('back')||/^(SCRIPT|STYLE|SVG|CANVAS|INPUT|SELECT|TEXTAREA)$/i.test(tg))return '';
+    const kids=[...n.childNodes];
+    if(tg==='TR'){const cs=kids.filter(k=>k.nodeType===1).map(k=>ws(walk(k))).filter(Boolean);return cs.join(cs.length===2?' — ':' · ')+'\n'}
+    if(tg==='DT')return ws(kids.map(walk).join(''))+': ';
+    if(tg==='DD')return ws(kids.map(walk).join(''))+'\n';
+    if(cl.contains('row')||cl.contains('tile')||cl.contains('ycol')||(tg==='BUTTON')){
+      const cs=kids.map(k=>ws(walk(k))).filter(Boolean);return cs.join(' — ')+'\n';
+    }
+    if(n.parentElement&&n.parentElement.classList.contains('mini')){return ws(kids.map(walk).join(' '))+'\n'}
+    const inner=kids.map(walk).join('');
+    if(/^(DIV|P|H1|H2|H3|SUMMARY|DETAILS|LI|UL|TABLE|TBODY|SECTION)$/.test(tg))return inner+'\n';
+    return inner;
+  }
+  let t=walk(root).split('\n').map(ws).filter(Boolean);
+  if(S.tab==='objects'&&S.obj){const o=allObjects().find(x=>x.id===S.obj);if(o)t.unshift('📍 '+o.name)}
+  return t.join('\n');
+}
+function cpCopy(txt,b){
+  const done=()=>{const w=b.textContent;b.textContent='✓ скопировано';b.classList.add('ok');setTimeout(()=>{b.textContent=w;b.classList.remove('ok')},1400)};
+  const fb=()=>{const a=document.createElement('textarea');a.value=txt;a.style.cssText='position:fixed;opacity:0;top:0';document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove();done()};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,fb);else fb();
+}
+function addCopy(){
+  document.querySelectorAll('#app .card,#app .hero,#app .goalhero').forEach(c=>{
+    if(c.dataset.cp||c.querySelector('.cp')||c.querySelector('input,select,textarea'))return;
+    c.dataset.cp='1';
+    const b=document.createElement('button');b.className='cp';b.type='button';b.textContent='Копировать';
+    const h=c.querySelector(':scope>h3');
+    if(h){h.classList.add('cph');h.appendChild(b)}
+    else if(c.classList.contains('card')){const r=document.createElement('div');r.className='cprow';r.appendChild(b);c.insertBefore(r,c.firstChild)}
+    else{b.classList.add('abs');c.appendChild(b)}
+  });
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.cp');if(!b)return;
+  e.stopPropagation();e.preventDefault();
+  let txt;
+  if(b.dataset.rep){const o=allObjects().find(x=>x.id===b.dataset.rep);txt=o?objReport(o,calc(o)):''}
+  else{const c=b.closest('.card,.hero,.goalhero');txt=c?cpText(c):''}
+  cpCopy(txt,b);
+},true);
+(function(){let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;addCopy()})}).observe(document.getElementById('app'),{childList:true,subtree:true})})();
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
