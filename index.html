@@ -180,7 +180,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=37"></script>
+<script src="data.enc.js?v=38"></script>
 <script>
 (function(){
 'use strict';
@@ -852,7 +852,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v37 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v38 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -898,6 +898,8 @@ function cpText(root){
   const txt=n=>ws(n.textContent||'');
   const cells=n=>[...n.children].filter(k=>!(k.classList.contains('cp')||k.classList.contains('x')||NO.test(k.tagName))).map(txt).filter(Boolean);
   function row(n,sub){
+    const h3=n.querySelector('h3');
+    if(h3){const sb=n.querySelector('.sub'),k=[...n.children],am=k.length>1?txt(k[k.length-1]):'';out.push('*'+txt(h3)+'*'+(am?' — *'+am+'*':''));if(sb)out.push('_'+txt(sb)+'_');return}
     const cs=cells(n);if(!cs.length)return;
     if(sub){out.push(cs.length>1?'    ◦ '+cs[0]+' — '+cs.slice(1).join(' · '):'    ↳ _'+cs[0]+'_');return}
     if(cs.length===1)out.push('• '+cs[0]);
@@ -906,6 +908,7 @@ function cpText(root){
   function walk(n){
     if(n.nodeType!==1)return;
     const tg=n.tagName,cl=n.classList;
+    if(/^Последние:/.test(txt(n)))return;
     if(NO.test(tg)||cl.contains('cp')||cl.contains('cprow')||cl.contains('tabs')||cl.contains('x')||cl.contains('back'))return;
     if(tg==='H3'){const t=txt(n).replace(/Копировать/,'').trim();if(t){if(head++>0)out.push('');out.push('*'+t+'*')}return}
     if(tg==='TR'){if(n.querySelector('th'))return;const cs=[...n.children].map(txt).filter(Boolean);if(cs.length===2)out.push('• '+cs[0]+' — *'+cs[1]+'*');else if(cs.length>2)out.push('• *'+cs[0]+'* — '+cs.slice(1).join(' · '));else if(cs.length)out.push('• '+cs[0]);return}
@@ -956,7 +959,7 @@ document.addEventListener('click',e=>{
   e.stopPropagation();e.preventDefault();
   let txt;
   if(b.dataset.rep){const o=allObjects().find(x=>x.id===b.dataset.rep);txt=o?objReport(o,calc(o)):''}
-  else{const c=b.closest('.card,.hero,.goalhero');const oo=c&&c.dataset.act==='open'?allObjects().find(x=>x.id===c.dataset.id):null;txt=oo?objReport(oo,calc(oo)):(c?cpText(c):'')}
+  else{const c=b.closest('.card,.hero,.goalhero');txt=c?cpText(c):''}
   cpCopy(txt,b);
 },true);
 (function(){let t=0;new MutationObserver(()=>{if(t)return;t=requestAnimationFrame(()=>{t=0;addCopy()})}).observe(document.getElementById('app'),{childList:true,subtree:true})})();
