@@ -180,7 +180,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=34"></script>
+<script src="data.enc.js?v=35"></script>
 <script>
 (function(){
 'use strict';
@@ -197,6 +197,7 @@ const MON=['янв','фев','мар','апр','май','июн','июл','ав�
 let LS={};
 try{LS=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){LS={}}
 LS.deal=LS.deal||{};LS.meta=LS.meta||{};LS.add=LS.add||{};LS.newObjs=LS.newObjs||[];
+const curM=()=>(S.tab==='objects'&&S.obj&&S.otab==='search')?S.omat:S.mat;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(LS))}catch(e){}}
 
 /* ---------- helpers ---------- */
@@ -285,7 +286,7 @@ function stats(){
 }
 
 /* ---------- state ---------- */
-const S={tax:{y:'2026',fc:{}},tab:'home',obj:null,otab:'sum',of:'',os:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
+const S={tax:{y:'2026',fc:{}},tab:'home',obj:null,otab:'sum',of:'',os:'',oq:'',olim:60,ofl:'all',exp:{scope:'all',by:'g',drill:null,personal:false},mat:{q:'',g:''},omat:{q:'',g:''},ana:{sub:'dyn',year:null,rk:'margin',sel:null,cg:null,cm:'t'},calc:{buy:'',repair:'',realtor:'500000',sell:'',buyDkp:'',sellDkp:''}};
 
 /* ---------- components ---------- */
 function bars(map,total,attrf){
@@ -383,8 +384,8 @@ function vObject(){
   const c=calc(o);
   let h=`<button class="back" data-act="tab" data-t="objects">← Объекты</button>
   <div class="row"><div class="grow"><div class="brand" style="font-size:26px">${esc(o.name)}</div><div class="sub">${esc(o.adr||'')}</div></div>${chip(o.status)}<button class="cp rep" data-rep="${esc(o.id)}">Отчёт</button></div>
-  <div class="tabs" style="margin-top:12px">${[['sum','Итоги'],['items','Расходы'],['deal','Сделка']].map(t=>`<button class="tab ${S.otab===t[0]?'on':''}" data-act="otab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>`;
-  if(S.otab==='sum')h+=objSum(o,c);else if(S.otab==='items')h+=objItems(o,c);else h+=objDeal(o,c);
+  <div class="tabs" style="margin-top:12px">${[['sum','Итоги'],['items','Расходы'],['search','🔍 Поиск'],['deal','Сделка']].map(t=>`<button class="tab ${S.otab===t[0]?'on':''}" data-act="otab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>`;
+  if(S.otab==='sum')h+=objSum(o,c);else if(S.otab==='items')h+=objItems(o,c);else if(S.otab==='search')h+=`<div class="hint" style="margin-bottom:8px">Поиск материалов только по объекту «${esc(o.name)}»</div>`+vMaterials(o.id);else h+=objDeal(o,c);
   return h;
 }
 function passport(o,c){
@@ -522,13 +523,13 @@ function allPurchases(){
   });
   return out;
 }
-function vMaterials(){
-  const M=S.mat,P=allPurchases().filter(i=>i.y!=='work'&&i.y!=='delivery');
+function vMaterials(oid){
+  const M=oid?S.omat:S.mat,P=allPurchases().filter(i=>i.y!=='work'&&i.y!=='delivery'&&(!oid||i.oid===oid));
   const cntTag={};P.forEach(i=>{if(!i.x)cntTag[i.t]=(cntTag[i.t]||0)+1});
-  const pop=Object.keys(cntTag).filter(t=>cntTag[t]>=3).sort((a,b)=>cntTag[b]-cntTag[a]).slice(0,18);
-  let h=`<div class="top"><div><div class="brand">Материалы</div><div class="sub">история цен: сколько и за сколько покупали</div></div></div>
+  const pop=Object.keys(cntTag).filter(t=>cntTag[t]>=(oid?2:3)).sort((a,b)=>cntTag[b]-cntTag[a]).slice(0,18);
+  let h=(oid?'':`<div class="top"><div><div class="brand">Материалы</div><div class="sub">история цен: сколько и за сколько покупали</div></div></div>`)+`
   <div style="position:relative;margin-bottom:10px"><input id="mq" placeholder="Поиск: ротбонд, иранский, кафель*клей…" value="${esc(M.q)}" style="margin-bottom:0;padding-right:44px" autocomplete="off">${M.q?`<button data-act="mqclr" aria-label="Очистить" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;border:0;background:var(--bg2);color:var(--mut);font-size:20px;line-height:1;cursor:pointer">×</button>`:''}</div>
-  <div class="tabs"><button class="tab ${!M.g?'on':''}" data-act="mg" data-g="">Все группы</button>${GROUPS.map(g=>`<button class="tab ${M.g===g?'on':''}" data-act="mg" data-g="${g}">${g}</button>`).join('')}</div>`;
+  <div class="tabs"><button class="tab ${!M.g?'on':''}" data-act="mg" data-g="">Все группы</button>${GROUPS.filter(g=>!oid||P.some(i=>i.g===g)).map(g=>`<button class="tab ${M.g===g?'on':''}" data-act="mg" data-g="${g}">${g}</button>`).join('')}</div>`;
   if(!M.q&&!M.g){
     h+=`<div class="hint" style="margin-bottom:8px">Часто покупаемое — нажмите:</div><div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px">${pop.map(t=>`<button class="tab" data-act="mq" data-q="${esc(t)}">${esc(t)} · ${cntTag[t]}</button>`).join('')}</div><div class="note">Введите название — покажу все покупки по объектам: сумма, количество, цена за единицу и динамику. Знак * — любые символы.</div>`;
     return h;
@@ -541,7 +542,7 @@ function vMaterials(){
   h+=keys.slice(0,40).map(k=>{
     const arr=by[k].slice().sort((a,b)=>a.ord-b.ord),real=arr.filter(i=>!i.x),am=real.map(i=>i.a),sum=am.reduce((s,v)=>s+v,0),pr=arr.filter(i=>i.p).map(i=>i.p);
     return `<details class="card" style="padding:0"><summary style="padding:13px 15px"><div class="row"><b class="grow">${esc(k)}</b><span class="num">${money(sum)}</span></div><div class="hint">${arr.length} покупок${am.length?` · от ${money(Math.min(...am))} до ${money(Math.max(...am))}, средняя ${money(sum/am.length)}`:''}${pr.length?` · цена ед.: ${money(Math.min(...pr))}–${money(Math.max(...pr))}`:''}</div>${spark(am)}</summary>
-    <div style="padding:0 15px 10px">${arr.map(i=>`<div style="padding:7px 0;border-top:1px solid var(--line);cursor:pointer" data-act="itemgo" data-id="${i.oid}" data-g="${esc(i.g)}" data-s="${esc(i.s)}"><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${esc(i.o)} › ${esc(i.g)} ›${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.x?' · детализация общей закупки':''}</div></div>`).join('')}</div></details>`}).join('');
+    <div style="padding:0 15px 10px">${arr.map(i=>`<div style="padding:7px 0;border-top:1px solid var(--line)${oid?'':';cursor:pointer'}"${oid?'':` data-act="itemgo" data-id="${i.oid}" data-g="${esc(i.g)}" data-s="${esc(i.s)}"`}><div class="row"><span class="grow">${esc(i.n)}</span><span class="num">${money(i.a)}</span></div><div class="hint">${oid?'':esc(i.o)+' › '}${esc(i.g)} ›${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.x?' · детализация общей закупки':''}</div></div>`).join('')}</div></details>`}).join('');
   if(keys.length>40)h+=`<div class="hint">Показаны первые 40 видов — уточните запрос.</div>`;
   return h;
 }
@@ -851,7 +852,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v34 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v35 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
@@ -970,7 +971,7 @@ document.addEventListener('click',e=>{
   else if(a==='clros'){S.os='';render(true)}
   else if(a==='matgo'){S.tab='mat';S.obj=null;S.mat.q=el.dataset.q;S.mat.g='';render()}
   else if(a==='expgo'){S.tab='exp';S.obj=null;S.exp.scope=el.dataset.id;S.exp.by=el.dataset.b||'s';S.exp.drill=el.dataset.k;render()}
-  else if(a==='open'){S.os='';S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;render()}
+  else if(a==='open'){S.os='';S.tab='objects';S.obj=el.dataset.id;S.otab='sum';S.of='';S.oq='';S.olim=60;S.omat={q:'',g:''};render()}
   else if(a==='otab'){S.otab=el.dataset.t;S.of='';S.os='';S.oq='';S.olim=60;render()}
   else if(a==='ofl'){S.ofl=el.dataset.f;render(true)}
   else if(a==='of'){S.of=el.dataset.g;S.os='';S.olim=60;render(true)}
@@ -978,9 +979,9 @@ document.addEventListener('click',e=>{
   else if(a==='scope'){S.exp.scope=el.dataset.id;S.exp.drill=null;render(true)}
   else if(a==='by'){S.exp.by=el.dataset.b;S.exp.drill=null;render(true)}
   else if(a==='drill'){S.exp.drill=S.exp.drill===el.dataset.k?null:el.dataset.k;render(true)}
-  else if(a==='mg'){S.mat.g=el.dataset.g;render(true)}
-  else if(a==='mqclr'){S.mat.q='';render(true);const q=$('#mq');if(q)q.focus()}
-  else if(a==='mq'){S.mat.q=el.dataset.q;render()}
+  else if(a==='mg'){curM().g=el.dataset.g;render(true)}
+  else if(a==='mqclr'){curM().q='';render(true);const q=$('#mq');if(q)q.focus()}
+  else if(a==='mq'){curM().q=el.dataset.q;render()}
   else if(a==='ana'){S.ana.sub=el.dataset.sub;S.ana.year=null;render()}
   else if(a==='year'){S.tab='ana';S.ana.sub='dyn';S.ana.year=el.dataset.y||null;render()}
   else if(a==='rk'){S.ana.rk=el.dataset.k;render(true)}
@@ -1031,7 +1032,7 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
-  if(t.id==='mq'){S.mat.q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
+  if(t.id==='mq'){curM().q=t.value;clearTimeout(window._mt);window._mt=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#mq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.id==='oq'){S.oq=t.value;S.olim=60;clearTimeout(window._ot);window._ot=setTimeout(()=>{const pos=t.selectionStart;render(true);const n=$('#oq');if(n){n.focus();n.setSelectionRange(pos,pos)}},250)}
   else if(t.dataset.gp){const p=goalP(),cur=goalScen(p,p.sel==='custom'?p.custom:(GP.find(x=>x.id===p.sel)||GP[0])),v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)&&v>0){const base={n:cur.n,T:cur.T,gap:cur.gap,K:cur.K};base[t.dataset.gp]=t.dataset.gp==='K'?v*1e6:(t.dataset.gp==='n'?Math.max(1,Math.round(v)):v);goalSet('custom',base);goalSet('sel','custom');const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml();const ch=$('#gChips');if(ch)ch.innerHTML=goalChipsHtml()}}
   else if(t.dataset.gg){const k=t.dataset.gg,v=parseFloat(String(t.value).replace(',','.'));if(!isNaN(v)){if(k==='roi'||k==='tshM'){goalSet(k==='roi'?'roiM':'tshM',v/100);goalSet('auto',false);const cb=document.querySelector('[data-gt=auto]');if(cb)cb.checked=false}else goalSet(k,(k==='cap0'||k==='sal')?v*1e6:v/100);const o=$('#goalOut');if(o)o.innerHTML=goalOutHtml()}}
