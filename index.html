@@ -180,7 +180,7 @@ tr.total td{font-weight:800;border-top:2px solid var(--gold2)}
 </div>
 <div id="app"></div>
 <nav id="nav"></nav>
-<script src="data.enc.js?v=30"></script>
+<script src="data.enc.js?v=31"></script>
 <script>
 (function(){
 'use strict';
@@ -443,12 +443,15 @@ function objSum(o,c){
 function objItems(o,c){
   const g=S.of,q=norm(S.oq);
   let items=o.items.map((i,ix)=>Object.assign({ix},i)).filter(i=>!i.x&&(!g||i.g===g)&&(!S.os||i.s===S.os)&&(!q||norm(i.n+' '+i.t+' '+i.s).indexOf(q)>-1)).sort((a,b)=>(b.d||'').localeCompare(a.d||'')||b.ix-a.ix);
+  const attS={};
+  {const att={};items.forEach(i=>{if(i.at){(att[i.at]=att[i.at]||[]).push(i);attS[i.at]=(attS[i.at]||0)+i.a}});
+   const ord=[];items.forEach(i=>{if(i.at&&items.some(p=>p.n===i.at&&!p.at))return;ord.push(i);if(!i.at)(att[i.n]||[]).forEach(z=>ord.push(z))});items=ord}
   const sum=items.reduce((s,i)=>s+i.a,0),shown=items.slice(0,S.olim);
   let h=`<details class="card" style="border-top:1px solid var(--line)"><summary class="gold" style="padding:0"><b>+ Добавить расход</b></summary>${addForm(o)}</details>
   <input id="oq" placeholder="Поиск по расходам объекта" value="${esc(S.oq)}" style="margin-bottom:10px">
   <div class="tabs"><button class="tab ${!g?'on':''}" data-act="of" data-g="">Все</button>${GROUPS.filter(x=>c.byG[x]).map(x=>`<button class="tab ${g===x?'on':''}" data-act="of" data-g="${x}">${x}</button>`).join('')}</div>
   ${S.os?`<div style="margin-bottom:8px"><button class="tab on" data-act="clros">${esc(S.os)} ✕</button></div>`:''}<div class="row hint" style="margin-bottom:6px"><span>${items.length} поз.</span><span class="num">итого ${money(sum)}</span></div><div class="card">`;
-  h+=shown.map(i=>`<div class="li"><div class="row"><span class="grow">${esc(i.n)}${i.est?' <span class="est">ОЦЕНКА</span>':''}</span><span class="num">${money(i.a)}</span></div><div class="row hint"><span><i class="dot" style="background:${GCOL[i.g]}"></i>${i.g} › ${esc(i.s)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.d?' · '+fdate(i.d):''}</span>${i.add?`<button class="x" data-act="delitem" data-id="${o.id}" data-i="${i.add}">×</button>`:''}</div></div>`).join('')||'<div class="mut">Расходов пока нет</div>';
+  h+=shown.map(i=>`<div class="li"><div class="row"><span class="grow">${i.at&&items.some(p=>p.n===i.at)?'<span style="padding-left:14px;color:var(--mut)">+ </span>':''}${esc(i.n)}${!i.at&&attS[i.n]?` <span class="hint">· с доставкой ${money(i.a+attS[i.n])}</span>`:''}${i.est?' <span class="est">ОЦЕНКА</span>':''}</span><span class="num">${money(i.a)}</span></div><div class="row hint"><span><i class="dot" style="background:${GCOL[i.g]}"></i>${i.g} › ${esc(i.s)}${i.q?` · ${i.q} ${esc(i.u||'')} × ${money(i.p)}`:''}${i.d?' · '+fdate(i.d):''}</span>${i.add?`<button class="x" data-act="delitem" data-id="${o.id}" data-i="${i.add}">×</button>`:''}</div></div>`).join('')||'<div class="mut">Расходов пока нет</div>';
   h+=`</div>`;
   if(items.length>shown.length)h+=`<button class="btn ghost block" data-act="more">Показать ещё (${items.length-shown.length})</button>`;
   return h;
@@ -848,7 +851,7 @@ function render(keep){
   else if(S.tab==='ana')h=vAnalytics();
   else if(S.tab==='tax')h=vTax();
   else if(S.tab==='goal')h=vGoal();
-  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v30 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
+  else h=vHome()+`<div class="hint" style="text-align:center;margin:14px 0 4px">версия v31 · данные от 26.11 · если цифры старые — обновите страницу</div>`;
   $('#app').innerHTML=h;
   $('#nav').innerHTML=TABS.map(t=>`<button class="${S.tab===t[0]||(S.tab==='newobj'&&t[0]==='objects')?'on':''}" data-act="tab" data-t="${t[0]}"><svg viewBox="0 0 24 24">${ICONS[t[2]]}</svg>${t[1]}</button>`).join('');
   window.scrollTo(0,keep?y:0);
